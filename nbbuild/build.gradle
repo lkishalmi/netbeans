@@ -1,0 +1,22 @@
+apply plugin: 'java'
+
+sourceCompatibility = '1.8'
+sourceSets {
+    main {
+        java.srcDirs = ['antsrc']
+        resources.srcDirs = []
+    }
+    test {
+        java.srcDirs = ['test/unit']
+        resources.srcDirs = []
+    }
+}
+repositories {
+    jcenter()
+}
+dependencies {
+    compile 'org.apache.ant:ant:1.10.+'
+    compile 'javax.help:javahelp:2.0.05'
+    
+    testCompile 'junit:junit:4.12'
+}

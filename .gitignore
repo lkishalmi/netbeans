@@ -104,7 +104,9 @@ derby.log
 
 # Gradle Support Generated files #
 ##################################
-/extide/gradle/netbeans-gradle-tooling/.gradle/
-/extide/gradle/netbeans-gradle-tooling/gradle/wrapper/gradle-wrapper.jar
-/extide/gradle/release/modules/gradle/daemon-loader/.gradle/
+/groovy/gradle/netbeans-gradle-tooling/.gradle/
+/groovy/gradle/netbeans-gradle-tooling/gradle/wrapper/gradle-wrapper.jar
+/groovy/gradle/release/modules/gradle/daemon-loader/.gradle/
 /nbbuild/misc/prepare-bundles/target/
+
+.gradle
