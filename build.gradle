@@ -1,0 +1,9 @@
+allprojects {
+    repositories {
+        jcenter()
+    }
+}
+
+subprojects {
+    apply from: "$rootDir/gradle/netbeans.gradle"
+}

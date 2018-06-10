@@ -114,3 +114,5 @@ derby.log
 
 # idea
 .idea
+.gradle
+

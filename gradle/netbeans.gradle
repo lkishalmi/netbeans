@@ -1,0 +1,31 @@
+apply plugin: 'java'
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src']
+        }
+    }
+    test {
+        java {
+            srcDirs = ['test/unit']
+        }
+    }
+}
+
+jar {
+    baseName = project.name.replace('.', '-')
+}
+
+dependencies {
+    if (file('external/binaries-list').canRead()) {
+        file('external/binaries-list').readLines().each() { line ->
+            if (!line.startsWith('#')) {
+                def dependency = line.substring(line.indexOf(' ') + 1)
+                if (dependency.indexOf(':') > 0) {
+                    compile dependency
+                }
+            }
+        }
+    }
+}
