@@ -1,29 +1,25 @@
-apply plugin: 'java'
-
-sourceSets {
-    main {
-        java {
-            srcDirs = ['src']
-        }
-    }
-    test {
-        java {
-            srcDirs = ['test/unit']
-        }
-    }
-}
-
-jar {
-    baseName = project.name.replace('.', '-')
-}
+apply from: "$rootDir/gradle/netbeans-base.gradle"
 
 dependencies {
-    if (file('external/binaries-list').canRead()) {
-        file('external/binaries-list').readLines().each() { line ->
-            if (!line.startsWith('#')) {
-                def dependency = line.substring(line.indexOf(' ') + 1)
-                if (dependency.indexOf(':') > 0) {
-                    compile dependency
+    def nb_module = clusters.modulesByName[project.name]
+    
+    if (nb_module != null) {
+        nb_module.externalDeps.each { dep ->
+            if (projectDir.name.startsWith('libs.')) {
+                api dep
+            } else {
+                implementation dep 
+            }
+        }
+        nb_module.dependencies.each { dep ->
+            implementation project(":${dep.codeNameBase}")
+        }
+        if (nb_module.testDependencies['unit'] != null) {
+            nb_module.testDependencies['unit'].each {dep -> 
+                if (!dep.test) {
+                    testImplementation project(":${dep.codeNameBase}")
+                } else {
+                    testImplementation project(path:":${dep.codeNameBase}", configuration: 'testApi')
                 }
             }
         }

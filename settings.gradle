@@ -9,17 +9,38 @@
 
 rootProject.name = 'netbeans'
 include 'nbbuild'
-
-rootDir.eachDir { sub ->
-    File projectXML = new File (sub, 'nbproject/project.xml')
-    if (projectXML.canRead()) {
-        def prj = new XmlSlurper().parse(projectXML)
-        if ('org.netbeans.modules.apisupport.project'.equals(prj.type.text())) {
-            def name = prj.configuration.data['code-name-base'].text()
-            include name
-            findProject(":$name").projectDir = sub
-        } else {
-            println sub.name
+def clusterDirs = [\
+    'apisupport', \
+    'enterprise', \
+    'ergonomics',
+    'extide',
+    'groovy',
+    'harness',
+    'ide',
+    'java',
+    'javafx',
+    'nb',
+    'nbi',
+    'php',
+    'platform',
+    'profiler',
+    'webcommon',
+    'websvccommon'
+]
+//clusterDirs = ['platform']
+clusterDirs.each() { cluster ->
+    new File(rootDir, cluster).eachDir { sub -> 
+        File projectXML = new File (sub, 'nbproject/project.xml')
+        if (projectXML.canRead()) {
+            def prj = new XmlSlurper().parse(projectXML)
+            if ('org.netbeans.modules.apisupport.project'.equals(prj.type.text())) {
+                def name = prj.configuration.data['code-name-base'].text()
+                include name
+                findProject(":$name").projectDir = sub
+//                prj.configuration.data['module-dependencies'].dependency.each () { 
+//                    println it['code-name-base'].text
+//                } 
+            }
         }
     }
 }

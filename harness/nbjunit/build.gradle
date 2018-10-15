@@ -1,0 +1,7 @@
+apply from: "$rootDir/gradle/netbeans-base.gradle"
+
+dependencies {
+    implementation project(':org.openide.util.lookup')
+    implementation project(':org.netbeans.insane')
+    api            project(':org.netbeans.libs.junit4')
+}
