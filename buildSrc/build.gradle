@@ -1,0 +1,15 @@
+apply plugin: 'groovy'
+//apply plugin: 'application'
+
+//group = 'org.netbeans.gradle.nbsupport'
+
+//mainClassName = "org.netbeans.gradle.nbsupport.nb.support.Clusters"
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile localGroovy()
+    testCompile 'junit:junit:4.12'
+}

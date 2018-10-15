@@ -1,9 +1,20 @@
+import org.netbeans.gradle.nbsupport.nb.support.Clusters;
+
+ext {
+    println file("nbbuild/cluster.properties")
+    clusters = Clusters.loadClusters(rootDir)
+    println clusters
+}
+
 allprojects {
     repositories {
         jcenter()
     }
 }
 
-subprojects {
-    apply from: "$rootDir/gradle/netbeans.gradle"
+
+subprojects { project ->
+    if (!file("${project.projectDir}/build.gradle").exists()) {
+        apply from: "$rootDir/gradle/netbeans.gradle"
+    }
 }
