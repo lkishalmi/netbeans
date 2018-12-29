@@ -1,28 +1,8 @@
 apply plugin: 'java-library'
 
-configurations { testApi }
-
-sourceSets {
-    main {
-        java {
-            srcDirs = ['src']
-        }
-    }
-    test {
-        java {
-            srcDirs = ['test/unit']
-        }
-    }
-}
-
-jar {
-    baseName = project.name.replace('.', '-')
-}
-
-task testJar(type: Jar) {
-    baseName = project.name.replace('.', '-')
-    classifier = 'test'
-    from sourceSets.test.output.classesDirs
-}
-
-artifacts { testApi testJar }
+ext.cluster = file("..").name
+ext.clusterBuildDir = file("$rootDir/build/netbeans/$cluster")
+ext.projectProps = new Properties()
+file("nbproject/project.properties").withInputStream { ext.projectProps.load(it) }
+    
+ext.moduleJarDir = ext.projectProps.hasProperty("module.jar.dir") ? ext.projectProps["module.jar.dir"] : "modules"

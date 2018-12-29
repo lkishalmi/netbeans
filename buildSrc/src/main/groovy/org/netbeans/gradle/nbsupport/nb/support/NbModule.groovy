@@ -68,17 +68,17 @@ class NbModule {
                 def typeName = testType.name.toString()
                 def deps = []
                 testType['test-dependency'].each { dependency ->
-                    if (dependency['code-name-base'] != null) {
+                    if (dependency['code-name-base'].toString() != name) {
                         Dependency dep = new Dependency(dependency['code-name-base'].toString())
-                        dep.buildPrerequisite = dependency['build-prerequisite'] != null
-                        dep.compileDependency = dependency['compile-dependency'] != null
-                        dep.recursive = dependency['recursive'] != null
-                        dep.test = dependency['test'] != null
-                        if (dependency['run-dependency'] != null) {
-                            if (dependency['run-dependency']['release-version'] != null) {
+                        dep.buildPrerequisite = !dependency['build-prerequisite'].empty
+                        dep.compileDependency = !dependency['compile-dependency'].empty
+                        dep.recursive = !dependency.recursive.empty
+                        dep.test = !dependency.test.empty
+                        if (!dependency['run-dependency'].empty) {
+                            if (!dependency['run-dependency']['release-version'].empty) {
                                 dep.releaseVersion = dependency['run-dependency']['release-version']
                             }
-                            if (dependency['run-dependency']['specification-version'] != null) {
+                            if (!dependency['run-dependency']['specification-version'].empty) {
                                 dep.specificationVersion = dependency['run-dependency']['specification-version']
                             }
                         }
@@ -116,6 +116,10 @@ class NbModule {
         
         Dependency(String name) {
             codeNameBase = name
+        }
+        
+        String toString() {
+            return "$codeNameBase:$releaseVersion:$specificationVersion - test: $test, recursive: $recursive"
         }
     }
 }

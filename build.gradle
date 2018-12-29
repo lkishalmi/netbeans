@@ -12,9 +12,19 @@ allprojects {
     }
 }
 
-
 subprojects { project ->
     if (!file("${project.projectDir}/build.gradle").exists()) {
         apply from: "$rootDir/gradle/netbeans.gradle"
+    }
+}
+
+ext.clusters.clusters.each() { name, cluster ->
+    project.task ("build${name.capitalize()}Cluster", group: 'Build') {
+        cluster.dependencies.each { depCluster ->
+            dependsOn "build${depCluster.name.capitalize()}Cluster"
+        }
+        cluster.modules.each { module ->
+            dependsOn ":${module.name}:build"
+        }
     }
 }

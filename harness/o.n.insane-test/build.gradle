@@ -1,0 +1,16 @@
+apply plugin: 'java'
+
+sourceSets {
+    test {
+        java {
+            srcDirs = ['../o.n.insane/test/unit/src']
+        }
+    }
+}
+
+dependencies {
+    testImplementation project(':org.netbeans.insane')
+    testImplementation project(':org.netbeans.modules.nbjunit')
+    testImplementation project(':org.netbeans.libs.junit4')
+
+}

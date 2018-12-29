@@ -1,0 +1,8 @@
+sourceSets {
+    test {
+        java {
+            srcDirs = ['../nbjunit/test']
+        }
+    }
+}
+

@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public class DependencyItem<T> {
     
-    Set<DependencyItem<? extends T>> dependenies = new LinkedHashSet<>();
+    Set<DependencyItem<? extends T>> dependencies = new LinkedHashSet<>();
     final String name;
 
     public DependencyItem(String name) {
@@ -23,13 +23,13 @@ public class DependencyItem<T> {
     }
     
     public void dependsOn(DependencyItem<? extends T> dependency) {
-        dependenies.add(dependency);
+        dependencies.add(dependency);
     }
     
     public Set<DependencyItem<? extends T>> getDependencies(boolean transitive) throws IllegalStateException {
         Set<DependencyItem<? extends T>> ret = new HashSet<>();
         if (!transitive) {
-            ret.addAll(dependenies);
+            ret.addAll(dependencies);
         } else {
             LinkedList<DependencyItem<? extends T>> todo = new LinkedList<>();
             todo.add(this);
@@ -38,7 +38,7 @@ public class DependencyItem<T> {
                 if (ret.contains(last)) {
                     todo.removeLast();
                 } else {
-                    for (DependencyItem<? extends T> dep : last.dependenies) {
+                    for (DependencyItem<? extends T> dep : last.dependencies) {
                         if (!todo.contains(dep)) {
                             todo.add(dep);
                         } else {
@@ -54,6 +54,10 @@ public class DependencyItem<T> {
         return ret;
     }
 
+    public Set<DependencyItem<? extends T>> getDependencies() {
+        return dependencies;
+    }
+    
     @Override
     public String toString() {
         return "DependencyItem{" + "name=" + name + '}';
