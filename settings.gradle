@@ -9,6 +9,12 @@
 
 rootProject.name = 'netbeans'
 include 'nbbuild'
+
+//include 'org.netbeans.insane-test'
+//project(':org.netbeans.insane-test').projectDir = new File(rootDir, 'harness/o.n.insane')
+//project(':org.netbeans.insane-test').buildFileName = "build-test.gradle"
+//project(':org.netbeans.insane-test').projectDir = new File(rootDir, 'harness/o.n.insane-test')
+
 def clusterDirs = [\
     'apisupport', \
     'enterprise', \
@@ -27,7 +33,7 @@ def clusterDirs = [\
     'webcommon',
     'websvccommon'
 ]
-//clusterDirs = ['platform']
+
 clusterDirs.each() { cluster ->
     new File(rootDir, cluster).eachDir { sub -> 
         File projectXML = new File (sub, 'nbproject/project.xml')
@@ -36,10 +42,12 @@ clusterDirs.each() { cluster ->
             if ('org.netbeans.modules.apisupport.project'.equals(prj.type.text())) {
                 def name = prj.configuration.data['code-name-base'].text()
                 include name
-                findProject(":$name").projectDir = sub
-//                prj.configuration.data['module-dependencies'].dependency.each () { 
-//                    println it['code-name-base'].text
-//                } 
+                project(":$name").projectDir = sub
+                if (new File(sub, 'build-test.gradle').exists()) {
+                    include "$name-test"
+                    project(":$name-test").projectDir = sub
+                    project(":$name-test").buildFileName = 'build-test.gradle'
+                }
             }
         }
     }

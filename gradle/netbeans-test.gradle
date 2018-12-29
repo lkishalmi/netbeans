@@ -1,0 +1,45 @@
+apply from: "$rootDir/gradle/netbeans-base.gradle"
+
+configurations { testApi }
+
+sourceSets {
+    test {
+        java {
+            srcDirs = ['test/unit/src']
+        }
+        resources {
+            srcDirs = ['test/unit/src']
+            exclude '**/*.java'
+        }
+    }
+}
+
+task ('jarTest', type: Jar,  dependsOn: testClasses, description: 'create a jar from tests') {
+    from sourceSets.test.output
+    classifier = 'test'
+}
+
+artifacts {
+    testApi jarTest
+}
+
+dependencies {
+    def nb_module = clusters.modulesByName[project.name]
+    if (nb_module == null) {
+        nb_module = clusters.modulesByName[project.name - '-test']
+    }
+    if (nb_module != null) {
+        if (nb_module.testDependencies['unit'] != null) {
+            nb_module.testDependencies['unit'].each {dep -> 
+                if (!dep.test) {
+                    def testProject = findProject(":${dep.codeNameBase}-test")
+                    def projectPath = testProject == null ? ":${dep.codeNameBase}" : ":${dep.codeNameBase}-test"
+                    println projectPath
+                    testImplementation project(path: projectPath, configuration: 'testApi')
+                } else {
+                    testImplementation project(":${dep.codeNameBase}")
+                }
+            }
+        }
+    }
+}
