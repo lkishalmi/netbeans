@@ -31,10 +31,9 @@ dependencies {
     if (nb_module != null) {
         if (nb_module.testDependencies['unit'] != null) {
             nb_module.testDependencies['unit'].each {dep -> 
-                if (!dep.test) {
+                if (dep.test) {
                     def testProject = findProject(":${dep.codeNameBase}-test")
                     def projectPath = testProject == null ? ":${dep.codeNameBase}" : ":${dep.codeNameBase}-test"
-                    println projectPath
                     testImplementation project(path: projectPath, configuration: 'testApi')
                 } else {
                     testImplementation project(":${dep.codeNameBase}")

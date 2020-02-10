@@ -3,6 +3,11 @@ apply plugin: 'java-library'
 ext.cluster = file("..").name
 ext.clusterBuildDir = file("$rootDir/build/netbeans/$cluster")
 ext.projectProps = new Properties()
-file("nbproject/project.properties").withInputStream { ext.projectProps.load(it) }
+def projectPropsName = 'nbproject/project.properties'
+if (project.name.endsWith('-test')) {
+    ext.siblingName = projectDir.name - '-test'
+    projectPropsName = "../${ext.siblingName}/" + projectPropsName
+}
+file(projectPropsName).withInputStream { ext.projectProps.load(it) }
     
 ext.moduleJarDir = ext.projectProps.hasProperty("module.jar.dir") ? ext.projectProps["module.jar.dir"] : "modules"

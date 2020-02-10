@@ -70,15 +70,15 @@ class NbModule {
                 testType['test-dependency'].each { dependency ->
                     if (dependency['code-name-base'].toString() != name) {
                         Dependency dep = new Dependency(dependency['code-name-base'].toString())
-                        dep.buildPrerequisite = !dependency['build-prerequisite'].empty
-                        dep.compileDependency = !dependency['compile-dependency'].empty
-                        dep.recursive = !dependency.recursive.empty
-                        dep.test = !dependency.test.empty
+                        dep.buildPrerequisite = !dependency['build-prerequisite'].isEmpty()
+                        dep.compileDependency = !dependency['compile-dependency'].isEmpty()
+                        dep.recursive = !dependency.recursive.isEmpty()
+                        dep.test = !dependency.test.isEmpty()
                         if (!dependency['run-dependency'].empty) {
-                            if (!dependency['run-dependency']['release-version'].empty) {
+                            if (!dependency['run-dependency']['release-version'].isEmpty()) {
                                 dep.releaseVersion = dependency['run-dependency']['release-version']
                             }
-                            if (!dependency['run-dependency']['specification-version'].empty) {
+                            if (!dependency['run-dependency']['specification-version'].isEmpty()) {
                                 dep.specificationVersion = dependency['run-dependency']['specification-version']
                             }
                         }
@@ -104,7 +104,19 @@ class NbModule {
         }
         return true
     }
-    
+
+    void printDependencies() {
+        println "--- $name dependencies ---"
+        println 'External:'
+        externalDeps.each { dep -> println "    $dep" }
+        println 'Standard:'
+        dependencies.each { dep -> println "    $dep" }
+        println 'Test:'
+        testDependencies.each { k, v ->
+            v.each { dep -> println "    $k - $dep" }
+        }
+    }
+
     static class Dependency {
         final String codeNameBase;
         boolean buildPrerequisite;
