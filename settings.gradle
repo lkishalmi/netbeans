@@ -43,10 +43,10 @@ clusterDirs.each() { cluster ->
                 def name = prj.configuration.data['code-name-base'].text()
                 include name
                 project(":$name").projectDir = sub
-                if (new File(sub, 'build-test.gradle').exists()) {
+                def testDir = new File(sub.getParentFile(), "${sub.getName()}-test")
+                if (testDir.isDirectory()) {
                     include "$name-test"
-                    project(":$name-test").projectDir = sub
-                    project(":$name-test").buildFileName = 'build-test.gradle'
+                    project(":$name-test").projectDir = testDir
                 }
             }
         }

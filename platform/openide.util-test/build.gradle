@@ -1,0 +1,13 @@
+apply from: "$rootDir/gradle/netbeans-test.gradle"
+
+compileTestJava {
+    options.annotationProcessorGeneratedSourcesDirectory file("$buildDir/generated/test/src")
+    options.annotationProcessorPath = sourceSets.main.output
+    options.compilerArgs = ['-implicit:class', '-processor', 'org.netbeans.modules.openide.util.NbBundleProcessor']
+    
+}
+
+dependencies {
+    annotationProcessor project(':org.openide.util.lookup')
+    //testAnnotationProcessor sourceSets.main.output
+}

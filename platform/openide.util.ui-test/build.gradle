@@ -1,0 +1,17 @@
+apply from: "$rootDir/gradle/netbeans-test.gradle"
+
+compileTestJava {
+    options.annotationProcessorGeneratedSourcesDirectory file("$buildDir/generated/test/src")
+//    options.compilerArgs = ['-Xlint:none', '-implicit:class', '-processor', 'org.netbeans.modules.openide.util.NbBundleProcessor']
+    options.compilerArgs = ['-Xlint:none', '-implicit:class']
+    
+}
+test {
+    forkEvery = 1
+}
+dependencies {
+    testAnnotationProcessor project(':org.openide.util')
+    testAnnotationProcessor sourceSets.main.output
+    testImplementation project(path: ':org.openide.util.lookup')
+    testImplementation project(path: ':org.openide.util-test', configuration: 'testApi')
+}

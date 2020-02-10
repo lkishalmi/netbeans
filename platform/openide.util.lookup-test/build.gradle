@@ -1,7 +1,11 @@
 apply from: "$rootDir/gradle/netbeans-test.gradle"
 
+test {
+    include '**/*Test.class'
+}
+
 dependencies {
-    testImplementation project(':org.netbeans.insane')
+    testImplementation project(':org.openide.util.lookup')
     testImplementation project(':org.netbeans.modules.nbjunit')
     testImplementation project(':org.netbeans.libs.junit4')
 }
