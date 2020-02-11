@@ -13,8 +13,18 @@ sourceSets {
 }
 
 jar {
-    destinationDir = file("$clusterBuildDir/$moduleJarDir")
-    baseName = project.name.replace('.', '-')
+    doFirst {
+        println project.ext.projectProps
+    }
+    destinationDirectory = file("$clusterBuildDir/$moduleJarDir")
+    archiveFileName = project.name.replace('.', '-') + '.jar'
+    manifest.from file("$projectDir/manifest.mf")
+    metaInf {
+        from(rootDir) {
+            include 'NOTICE'
+            include 'LICENSE'
+        }
+    }
 }
 
 dependencies {
@@ -23,7 +33,7 @@ dependencies {
     if (nb_module != null) {
         nb_module.externalDeps.each { dep ->
             if (projectDir.name.startsWith('libs.')) {
-                api dep
+                compile dep
             } else {
                 implementation dep 
             }

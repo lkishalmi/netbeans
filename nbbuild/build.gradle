@@ -15,8 +15,8 @@ repositories {
     jcenter()
 }
 dependencies {
-    compile 'org.apache.ant:ant:1.10.+'
-    compile 'javax.help:javahelp:2.0.05'
+    implementation 'org.apache.ant:ant:1.10.+'
+    implementation 'javax.help:javahelp:2.0.05'
     
-    testCompile 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.12'
 }
