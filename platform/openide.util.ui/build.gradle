@@ -1,13 +1,13 @@
 apply from: "$rootDir/gradle/netbeans-source.gradle"
 
 compileJava {
-    options.annotationProcessorGeneratedSourcesDirectory file("$buildDir/generated/main/src")
+//    options.annotationProcessorGeneratedSourcesDirectory file("$buildDir/generated/main/src")
 //    options.annotationProcessorPath = sourceSets.main.output
 //    options.compilerArgs = ['-implicit:class', '-processor', 'org.netbeans.modules.openide.util.NbBundleProcessor']
-    options.compilerArgs = ['-implicit:class']
+//    options.compilerArgs = ['-implicit:class']
     
 }
 
 dependencies {
-    annotationProcessor project(':org.openide.util.lookup')
+//    annotationProcessor project(':org.openide.util.lookup')
 }

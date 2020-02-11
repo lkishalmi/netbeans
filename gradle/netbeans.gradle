@@ -7,7 +7,7 @@ dependencies {
     if (nb_module != null) {
         nb_module.externalDeps.each { dep ->
             if (projectDir.name.startsWith('libs.')) {
-                api dep
+                compile dep
             } else {
                 implementation dep 
             }

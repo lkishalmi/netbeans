@@ -23,7 +23,14 @@ artifacts {
     testApi jarTest
 }
 
+test {
+    forkEvery = 1
+}
+
 dependencies {
+    if (project.name.endsWith('-test')) {
+        testImplementation project(":${project.name - '-test'}")
+    }
     def nb_module = clusters.modulesByName[project.name]
     if (nb_module == null) {
         nb_module = clusters.modulesByName[project.name - '-test']
@@ -35,9 +42,8 @@ dependencies {
                     def testProject = findProject(":${dep.codeNameBase}-test")
                     def projectPath = testProject == null ? ":${dep.codeNameBase}" : ":${dep.codeNameBase}-test"
                     testImplementation project(path: projectPath, configuration: 'testApi')
-                } else {
-                    testImplementation project(":${dep.codeNameBase}")
                 }
+                testImplementation project(":${dep.codeNameBase}")
             }
         }
     }
