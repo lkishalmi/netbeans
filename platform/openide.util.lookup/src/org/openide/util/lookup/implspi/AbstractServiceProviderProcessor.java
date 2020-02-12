@@ -194,7 +194,7 @@ public abstract class AbstractServiceProviderProcessor extends AbstractProcessor
         if (lines == null) {
             lines = new TreeSet<ServiceLoaderLine>();
             try {
-                try {
+/*                try {
                     FileObject in = filer.getResource(StandardLocation.SOURCE_PATH, "", rsrc);
                     in.openInputStream().close();
                     processingEnv.getMessager().printMessage(Kind.ERROR,
@@ -209,7 +209,7 @@ public abstract class AbstractServiceProviderProcessor extends AbstractProcessor
                     // at org.netbeans.modules.openide.util.ServiceProviderProcessor.register(ServiceProviderProcessor.java:99)
                 } catch (FileNotFoundException | NoSuchFileException x) {
                     // Good.
-                }
+                }*/
                 try {
                     FileObject in = filer.getResource(StandardLocation.CLASS_OUTPUT, "", rsrc);
                     InputStream is = in.openInputStream();
