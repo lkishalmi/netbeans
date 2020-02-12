@@ -24,7 +24,8 @@ artifacts {
 }
 
 test {
-    forkEvery = 1
+    //forkEvery = 1
+    include '**/*Test.class'
 }
 
 dependencies {

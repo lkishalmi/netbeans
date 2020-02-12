@@ -13,3 +13,6 @@ dependencies {
     //testAnnotationProcessor sourceSets.main.output
 }
 */
+dependencies {
+    annotationProcessor project(':org.openide.util.lookup')
+}
