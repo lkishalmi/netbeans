@@ -1,7 +1,0 @@
-apply from: "$rootDir/gradle/netbeans-source.gradle"
-
-dependencies {
-    implementation project(':org.openide.util.lookup')
-    implementation project(':org.netbeans.insane')
-    implementation project(':org.netbeans.libs.junit4')
-}

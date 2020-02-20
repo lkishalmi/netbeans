@@ -22,18 +22,18 @@ import groovy.util.XmlSlurper
  *
  * @author lkishalmi
  */
-class NbModule {
+class NbModuleImpl implements NbModule {
 
     final NbCluster cluster;
     final String relPath;
 
-    def externalDeps = []
-    def dependencies = []
-    def testDependencies = [:]
+    Map<String, String> classPathExtentions = new LinkedHashMap<>();
+    Set<? extends NbModule.Dependency> dependencies = new LinkedHashSet<>();
+    Map<String, Set<? extends NbModule.Dependency>> testDependencies = new HashMap<>();
     
     String name
     
-    public NbModule(NbCluster cluster, String relPath) {
+    public NbModuleImpl(NbCluster cluster, String relPath) {
         this.relPath = relPath;
         this.cluster = cluster;
     }
@@ -41,7 +41,23 @@ class NbModule {
     File getModuleDir() {
         return new File(cluster.dir, relPath);
     }
+
+    String getName() {
+        return name;
+    }
+
+    Map<String, String> getClassPathExtensions() {
+        return classPathExtentions;
+    }
     
+    Set<? extends NbModule.Dependency> getMainDependencies() {
+        return dependencies;
+    }
+
+    Set<? extends NbModule.Dependency> getTestDependencies(String testType) {
+        return testDependencies[testType];
+    }
+
     boolean resolve() {
         File projectXML = new File (getModuleDir(), 'nbproject/project.xml')
         if (projectXML.canRead()) {
@@ -87,28 +103,19 @@ class NbModule {
                 }
                 testDependencies[typeName] = deps
             }
-           
+           prj.configuration.data['class-path-extension'].each { cpe ->
+               String relPath = cpe['runtime-relative-path']
+               String origin = cpe['binary-origin']
+               classPathExtentions.put(relPath, origin)
+           }
         } else {
             return false
-        }
-        File externameDependencies = new File(getModuleDir(), 'external/binaries-list')
-        if (externameDependencies.canRead()) {
-            externameDependencies.readLines().each() { line ->
-                if (!line.startsWith('#')) {
-                    def dependency = line.substring(line.indexOf(' ') + 1)
-                    if (dependency.indexOf(':') > 0) {
-                        externalDeps.add(dependency)
-                    }
-                }
-            }
         }
         return true
     }
 
     void printDependencies() {
         println "--- $name dependencies ---"
-        println 'External:'
-        externalDeps.each { dep -> println "    $dep" }
         println 'Standard:'
         dependencies.each { dep -> println "    $dep" }
         println 'Test:'
@@ -117,7 +124,7 @@ class NbModule {
         }
     }
 
-    static class Dependency {
+    static class Dependency implements NbModule.Dependency {
         final String codeNameBase;
         boolean buildPrerequisite;
         boolean compileDependency;
@@ -128,6 +135,10 @@ class NbModule {
         
         Dependency(String name) {
             codeNameBase = name
+        }
+
+        public String getCodeNameBase() {
+            return codeNameBase;
         }
         
         String toString() {

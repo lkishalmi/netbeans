@@ -1,5 +1,0 @@
-apply from: "$rootDir/gradle/netbeans-test.gradle"
-
-test {
-    include '**/*Test.class'
-}

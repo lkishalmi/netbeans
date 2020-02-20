@@ -59,7 +59,7 @@ public class Clusters {
                 String moduleList = props.getProperty(CLUSTER_PREFIX + clusterName);
                 String[] modules = moduleList.split(",");
                 for (String module : modules) {
-                    NbModule nbm = new NbModule(cluster, module.trim());
+                    NbModuleImpl nbm = new NbModuleImpl(cluster, module.trim());
                     if (nbm.resolve()) {
                         ret.modulesByName.put(nbm.getName(), nbm);        
                         cluster.modules.add(nbm);
