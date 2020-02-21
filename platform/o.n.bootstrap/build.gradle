@@ -1,0 +1,16 @@
+
+task copyUnixLauncher(type: Copy) {
+    from 'launcher/unix'
+    into nbproject.moduleDestDir
+}
+
+task copyWindowsLauncher(type: Copy) {
+    from zipTree('external/platform-launchers-10.0.zip')
+    into nbproject.moduleDestDir
+}
+
+copyExternals.dependsOn(copyUnixLauncher, copyWindowsLauncher)
+
+test {
+  forkEvery = 1
+}
