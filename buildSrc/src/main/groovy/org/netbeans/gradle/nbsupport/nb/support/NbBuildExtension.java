@@ -27,7 +27,8 @@ public final class NbBuildExtension {
 
     Set<String> annotationProcessors = new HashSet<>(Arrays.asList(
         "org.openide.util.lookup",
-        "org.openide.util"
+        "org.openide.util",
+        "org.openide.modules"
     ));
 
 

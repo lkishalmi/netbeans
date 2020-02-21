@@ -31,6 +31,7 @@ import org.gradle.api.Project;
 public final class NbProjectExtension {
 
     public static final String MODULE_JAR_DIR = "module.jar.dir";
+    public static final String MODULE_JAR_NAME = "module.jar.basename";
     public static final String TEST_INCLUDES = "test.config.stableBTD.includes";
 
     boolean testOnly;
