@@ -61,6 +61,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         if (!"nbbuild".equals(moduleName)) {
             NbModule module = clusters.modulesByName.get(moduleName);
             copyExternals(project, nbproject, module);
+            copyTestData(project, nbproject, module);
             prepareDependencies(project, nbproject, module);
             if (!nbproject.isTestOnly()) {
                 updateJarTask(project, nbproject);
@@ -77,8 +78,9 @@ public class NetBeansModulePlugin implements Plugin<Project> {
 
         File srcDir = new File(prj.getProjectDir(), "src");
         main.getJava().setSrcDirs(Collections.singleton(srcDir));
+        main.getJava().include("**/*.java");
         main.getResources().setSrcDirs(Collections.singleton(srcDir));
-        main.getResources().exclude("**/*.java");
+        main.getResources().exclude("**/*.java", "**/doc-files", "**/package.html");
 
         SourceSet test = ss.getByName("test");
         File testSrcDir = new File(prj.getProjectDir(), "test/unit/src");
@@ -133,12 +135,11 @@ public class NetBeansModulePlugin implements Plugin<Project> {
                     }
                     Map<String, String> pdep = Map.of("path", ppath, "configuration", "testApi");
                     dh.add("testImplementation", dh.project(pdep));
-                } else {
-                    Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
-                    dh.add("testImplementation", dprj);
-                    if (nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
-                        dh.add("testAnnotationProcessor", dprj);
-                    }
+                }
+                Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
+                dh.add("testImplementation", dprj);
+                if (nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
+                    dh.add("testAnnotationProcessor", dprj);
                 }
             }
         }
@@ -159,11 +160,19 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         prj.getTasks().getByName("compileJava").dependsOn(copyExt);
     }
 
+    private void copyTestData(Project prj, NbProjectExtension nbproject, NbModule module) {
+        Copy copy = prj.getTasks().create("copyTestData", Copy.class);
+        copy.from(prj.file("test/unit/data")).into(new File(prj.getBuildDir(), "test/unit/data"));
+        prj.getTasks().findByName("test").dependsOn(copy);
+    }
+
     private void updateJarTask(Project prj, NbProjectExtension nbproject) {
         Jar jar = (Jar) prj.getTasks().findByName("jar");
         if (jar != null) {
             jar.getDestinationDirectory().set(nbproject.getModuleDestDir());
-            jar.getArchiveFileName().set(prj.getName().replace('.', '-') + ".jar");
+            String jarName = nbproject.getProperty(NbProjectExtension.MODULE_JAR_NAME);
+            jarName = jarName != null ? jarName : prj.getName().replace('.', '-') + ".jar";
+            jar.getArchiveFileName().set(jarName);
             jar.getManifest().from(new File(nbproject.getMainProjectDir(), "manifest.mf"));
             jar.getMetaInf().from(prj.getRootDir(), (CopySpec spec) -> {
                 spec.include("NOTICE", "LICENSE");
@@ -175,6 +184,8 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         Test test = (Test) prj.getTasks().findByName("test");
         String[] includes = nbproject.getProperty(NbProjectExtension.TEST_INCLUDES).split(" ");
         test.include(includes);
-        test.systemProperty("xtest.data", prj.file("test/unit/data").getAbsolutePath());
+        test.systemProperty("xtest.data", new File(prj.getBuildDir(), "test/unit/data").getAbsolutePath());
+        test.systemProperty("nbjunit.workdir", new File(prj.getBuildDir(), "test/unit/work").getAbsolutePath());
+        test.systemProperty("nbjunit.hard.timeout", "600000");
     }
 }
