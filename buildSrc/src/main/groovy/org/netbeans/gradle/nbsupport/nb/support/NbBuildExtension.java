@@ -28,9 +28,12 @@ public final class NbBuildExtension {
     Set<String> annotationProcessors = new HashSet<>(Arrays.asList(
         "org.openide.util.lookup",
         "org.openide.util",
-        "org.openide.modules"
+        "org.openide.modules",
+        "org.netbeans.modules.editor.mimelookup",
+        "org.openide.filesystems"
     ));
 
+    boolean generateCopyExternals = true;
 
     public NbBuildExtension() {
     }
@@ -46,4 +49,13 @@ public final class NbBuildExtension {
     public void annotationProcessor(String proc) {
         annotationProcessors.add(proc);
     }
+
+    public boolean isGenerateCopyExternals() {
+        return generateCopyExternals;
+    }
+
+    public void setGenerateCopyExternals(boolean generateCopyExternals) {
+        this.generateCopyExternals = generateCopyExternals;
+    }
+
 }
