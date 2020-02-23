@@ -33,6 +33,7 @@ public final class NbProjectExtension {
     public static final String MODULE_JAR_DIR = "module.jar.dir";
     public static final String MODULE_JAR_NAME = "module.jar.basename";
     public static final String TEST_INCLUDES = "test.config.stableBTD.includes";
+    public static final String TEST_EXCLUDES = "test.config.stableBTD.excludes";
 
     boolean testOnly;
     final File mainProjectDir;

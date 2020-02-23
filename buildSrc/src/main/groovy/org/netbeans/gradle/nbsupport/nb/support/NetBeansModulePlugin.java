@@ -30,6 +30,7 @@ import org.gradle.api.plugins.internal.JvmPluginsHelper;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
+import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.tasks.Jar;
 
@@ -55,12 +56,16 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         prepareTestConfigurtion(project);
         project.setDescription(nbproject.getDisplayName());
         prepareSourceSets(project);
+        updateCompileTasks(project);
         
         String moduleName = project.getName();
         moduleName = nbproject.isTestOnly() ? moduleName.substring(0, moduleName.length() - 5) : moduleName;
         if (!"nbbuild".equals(moduleName)) {
             NbModule module = clusters.modulesByName.get(moduleName);
-            copyExternals(project, nbproject, module);
+            Task copyExt = project.getTasks().create("copyExternals");
+            project.afterEvaluate((Project prj) -> {
+                copyExternals(prj, nbproject, module);
+            });
             copyTestData(project, nbproject, module);
             prepareDependencies(project, nbproject, module);
             if (!nbproject.isTestOnly()) {
@@ -85,8 +90,9 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         SourceSet test = ss.getByName("test");
         File testSrcDir = new File(prj.getProjectDir(), "test/unit/src");
         test.getJava().setSrcDirs(Collections.singleton(testSrcDir));
+        test.getJava().include("**/*.java");
         test.getResources().setSrcDirs(Collections.singleton(testSrcDir));
-        test.getResources().exclude("**.*.java");
+        test.getResources().exclude("**/*.java");
     }
 
     private void prepareTestConfigurtion(Project prj) {
@@ -122,6 +128,9 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             Project dprj = prj.findProject(":" + module.getName());
             dh.add("testImplementation", dprj);
             dh.add("testAnnotationProcessor", dprj);
+        } else {
+            Jar jar = (Jar) prj.getTasks().findByName("jar");
+            dh.add("testAnnotationProcessor", prj.files(jar.getArchiveFile()));
         }
 
         Set<? extends NbModule.Dependency> unitTestDeps = module.getTestDependencies("unit");
@@ -146,16 +155,19 @@ public class NetBeansModulePlugin implements Plugin<Project> {
     }
 
     private void copyExternals(Project prj, NbProjectExtension nbproject, NbModule module) {
-        Task copyExt = prj.getTasks().create("copyExternals");
-        for (Map.Entry<String, String> ext : module.getClassPathExtensions().entrySet()) {
-            String taskName = "copyExt-" + ext.getKey().replace('/', '_');
-            Copy copy = prj.getTasks().create(taskName, Copy.class);
-            File srcFile = new File(prj.getProjectDir(), ext.getValue());
-            File destFile = new File(nbproject.getModuleDestDir(), ext.getKey());
-            copy.from(srcFile.getParentFile()).into(destFile.getParentFile());
-            copy.include(srcFile.getName());
-            copy.rename(srcFile.getName(), destFile.getName());
-            copyExt.dependsOn(copy);
+        Task copyExt = prj.getTasks().findByName("copyExternals");
+        NbBuildExtension nbbuild = prj.getExtensions().getByType(NbBuildExtension.class);
+        if (nbbuild.isGenerateCopyExternals()) {
+            for (Map.Entry<String, String> ext : module.getClassPathExtensions().entrySet()) {
+                String taskName = "copyExt-" + ext.getKey().replace('/', '_');
+                Copy copy = prj.getTasks().create(taskName, Copy.class);
+                File srcFile = new File(prj.getProjectDir(), ext.getValue());
+                File destFile = new File(nbproject.getModuleDestDir(), ext.getKey());
+                copy.from(srcFile.getParentFile()).into(destFile.getParentFile());
+                copy.include(srcFile.getName());
+                copy.rename(srcFile.getName(), destFile.getName());
+                copyExt.dependsOn(copy);
+            }
         }
         prj.getTasks().getByName("compileJava").dependsOn(copyExt);
     }
@@ -180,10 +192,21 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         }
     }
 
+    private void updateCompileTasks(Project prj) {
+        JavaCompile compile = (JavaCompile) prj.getTasks().findByName("compileJava");
+        compile.getOptions().setSourcepath(prj.files("src"));
+        compile = (JavaCompile) prj.getTasks().findByName("compileTestJava");
+        compile.getOptions().setSourcepath(prj.files("test/unit/src"));
+    }
+
     private void updateTestTask(Project prj, NbProjectExtension nbproject) {
         Test test = (Test) prj.getTasks().findByName("test");
-        String[] includes = nbproject.getProperty(NbProjectExtension.TEST_INCLUDES).split(" ");
+        String[] includes = nbproject.getProperty(NbProjectExtension.TEST_INCLUDES).split(",");
         test.include(includes);
+        if (nbproject.getProperty(NbProjectExtension.TEST_EXCLUDES) != null) {
+            String[] excludes = nbproject.getProperty(NbProjectExtension.TEST_EXCLUDES).split(",");
+            test.exclude(excludes);
+        }
         test.systemProperty("xtest.data", new File(prj.getBuildDir(), "test/unit/data").getAbsolutePath());
         test.systemProperty("nbjunit.workdir", new File(prj.getBuildDir(), "test/unit/work").getAbsolutePath());
         test.systemProperty("nbjunit.hard.timeout", "600000");
