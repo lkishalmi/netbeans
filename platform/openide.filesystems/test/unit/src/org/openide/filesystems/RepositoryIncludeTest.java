@@ -70,7 +70,7 @@ public class RepositoryIncludeTest extends NbTestCase {
         // org.openide.filesystems.resources.layer.xml, test-layer-1.xml, test-layer-2.xml, test/generated-layer.xml
         assertNotNull(r.getFileObject("foo"));
         assertNotNull(r.getFileObject("bar"));
-        assertEquals("Expecting four" + charr, 4, charr.size());  
+        assertEquals("Expecting three" + charr, 3, charr.size());
     }
     static URL literalURL(final String content) {
         try {
