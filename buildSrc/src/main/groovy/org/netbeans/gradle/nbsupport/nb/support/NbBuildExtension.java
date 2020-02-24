@@ -30,7 +30,13 @@ public final class NbBuildExtension {
         "org.openide.util",
         "org.openide.modules",
         "org.netbeans.modules.editor.mimelookup",
-        "org.openide.filesystems"
+        "org.openide.filesystems",
+
+        "net.java.html.boot",
+        "net.java.html.sound",
+        "net.java.html.geo",
+        "net.java.html.json"
+
     ));
 
     boolean generateCopyExternals = true;

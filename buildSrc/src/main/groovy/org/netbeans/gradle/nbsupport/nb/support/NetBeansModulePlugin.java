@@ -119,8 +119,9 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         for (NbModule.Dependency dependency : module.getMainDependencies()) {
             Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
             dh.add("implementation", dprj);
-            if (nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
+            if (dependency.isBuildPrerequisite() || nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
                 dh.add("annotationProcessor", dprj);
+                dh.add("testAnnotationProcessor", dprj);
             }
         }
 
@@ -134,22 +135,20 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         }
 
         Set<? extends NbModule.Dependency> unitTestDeps = module.getTestDependencies("unit");
-        if (unitTestDeps != null) {
-            for (NbModule.Dependency dependency : unitTestDeps) {
-                if (dependency.isTest()) {
-                    Project dprj = prj.findProject(":" + dependency.getCodeNameBase() + "-test");
-                    String ppath = ":" + dependency.getCodeNameBase();
-                    if (dprj != null) {
-                        ppath += "-test";
-                    }
-                    Map<String, String> pdep = Map.of("path", ppath, "configuration", "testApi");
-                    dh.add("testImplementation", dh.project(pdep));
+        for (NbModule.Dependency dependency : unitTestDeps) {
+            if (dependency.isTest()) {
+                Project dprj = prj.findProject(":" + dependency.getCodeNameBase() + "-test");
+                String ppath = ":" + dependency.getCodeNameBase();
+                if (dprj != null) {
+                    ppath += "-test";
                 }
-                Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
-                dh.add("testImplementation", dprj);
-                if (nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
-                    dh.add("testAnnotationProcessor", dprj);
-                }
+                Map<String, String> pdep = Map.of("path", ppath, "configuration", "testApi");
+                dh.add("testImplementation", dh.project(pdep));
+            }
+            Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
+            dh.add("testImplementation", dprj);
+            if (nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
+                dh.add("testAnnotationProcessor", dprj);
             }
         }
     }
@@ -170,6 +169,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             }
         }
         prj.getTasks().getByName("compileJava").dependsOn(copyExt);
+        prj.getTasks().getByName("build").dependsOn(copyExt);
     }
 
     private void copyTestData(Project prj, NbProjectExtension nbproject, NbModule module) {
@@ -190,6 +190,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
                 spec.include("NOTICE", "LICENSE");
             });
         }
+        jar.setEnabled(prj.file("src").isDirectory());
     }
 
     private void updateCompileTasks(Project prj) {

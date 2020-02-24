@@ -27,6 +27,9 @@ class NbModuleImpl implements NbModule {
     final NbCluster cluster;
     final String relPath;
 
+    private boolean mainResolved = false;
+    private boolean testResolved = false;
+
     Map<String, String> classPathExtentions = new LinkedHashMap<>();
     Set<? extends NbModule.Dependency> dependencies = new LinkedHashSet<>();
     Map<String, Set<? extends NbModule.Dependency>> testDependencies = new HashMap<>();
@@ -51,11 +54,45 @@ class NbModuleImpl implements NbModule {
     }
     
     Set<? extends NbModule.Dependency> getMainDependencies() {
+        if (!mainResolved) {
+            LinkedList<? extends NbModule.Dependency> temp = new LinkedList(dependencies);
+            mainResolved = true;
+            for (NbModule.Dependency dep: temp) {
+                if (dep.isRecursive()) {
+                    NbModule module = cluster.findInClusters(dep.getCodeNameBase());
+                    if (module != null) {
+                        dependencies.addAll(module.getMainDependencies())
+                    } else {
+                        Syetem.err.println("No module '" + dep.getCodeNameBase() + "' found for : '" + name)
+                    }
+                }
+            }
+        }
         return dependencies;
     }
 
     Set<? extends NbModule.Dependency> getTestDependencies(String testType) {
-        return testDependencies[testType];
+        //TODO: This one works on unittest for now.
+        Set<? extends NbModule.Dependency> testDep = testDependencies[testType];
+        if ((testDep != null) && !testResolved) {
+            LinkedList<? extends NbModule.Dependency> temp = new LinkedList(testDep);
+            testResolved = true
+            for (NbModule.Dependency dep: temp) {
+                if (dep.isRecursive()) {
+                    NbModule module = cluster.findInClusters(dep.getCodeNameBase());
+                    if (module != null) {
+                        def rdeps = dep.isTest() ? module.getTestDependencies(testType) : module.getMainDependencies()
+                        //print "Add recursive deps for $name through ${dep.codeNameBase}: ["
+                        //rdeps.each {print "${it.codeNameBase} "}
+                        //println ']'
+                        testDep.addAll(rdeps)
+                    } else {
+                        Syetem.err.println("No module '" + dep.getCodeNameBase() + "' found for test : '" + name)
+                    }
+                }
+            }
+        }
+        return testDep != null ? testDep : Collections.emptySet();
     }
 
     boolean resolve() {
