@@ -54,7 +54,7 @@ public class Clusters {
         for (String propName : props.stringPropertyNames()) {
             if (propName.startsWith(CLUSTER_PREFIX) && propName.endsWith(DIR_SUFFIX)) {
                 String clusterName = propName.substring(CLUSTER_PREFIX.length(), propName.length() - DIR_SUFFIX.length());
-                NbCluster cluster = new NbCluster(clusterName, new File(rootDir, props.getProperty(propName)));
+                NbCluster cluster = new NbCluster(ret, clusterName, new File(rootDir, props.getProperty(propName)));
                 ret.clusters.put(clusterName, cluster);
                 String moduleList = props.getProperty(CLUSTER_PREFIX + clusterName);
                 String[] modules = moduleList.split(",");

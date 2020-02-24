@@ -27,14 +27,20 @@ public class NbCluster extends DependencyItem<NbCluster>{
     
     final Set<NbModule> modules = new LinkedHashSet<>();
     final File dir;
-    
-    public NbCluster(String name, File dir) {
+    final Clusters clusters;
+
+    public NbCluster(Clusters clusters, String name, File dir) {
         super(name);
         this.dir = dir;
+        this.clusters = clusters;
     }
 
     public Set<NbModule> getModules() {
         return modules;
+    }
+
+    public NbModule findInClusters(String name) {
+        return clusters.modulesByName.get(name);
     }
 
     public File getDir() {
