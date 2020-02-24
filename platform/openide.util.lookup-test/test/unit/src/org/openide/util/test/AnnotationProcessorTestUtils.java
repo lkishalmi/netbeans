@@ -155,19 +155,7 @@ public class AnnotationProcessorTestUtils {
      * even if the resource path does not exist, so tests must be more lenient.
      */
     public static boolean searchClasspathBroken() {
-        // Cannot just check for e.g. SourceVersion.RELEASE_7 because we might be running JDK 6 javac w/ JDK 7 boot CP, and that is in JRE.
-        // (Anyway libs.javacapi/external/nb-javac-api.jar, in the test's normal boot CP, has this!)
-        // Filter.class added in 7ae4016c5938, not long after f3323b1c65ee which we rely on for this to work.
-        // Also cannot just check Class.forName(...) since tools.jar not in CP but ToolProvider loads it specially - not true anymore since JDK 9 ToolProvider does not look for tools.jar.
-        final String res = "com/sun/tools/javac/util/Filter.class"; //NOI18N
-        final CodeSource codeSource = ToolProvider.getSystemJavaCompiler().getClass().getProtectionDomain().getCodeSource();
-        if (codeSource != null) {
-            //Compiler from URLClassLoader - JDK7, JDK8 javac
-            return new URLClassLoader(new URL[] {codeSource.getLocation()}).findResource(res) == null;
-        } else {
-            //Compiler from Boot, Ext, System ClassLoader - JDK9 javac
-            return ClassLoader.getSystemClassLoader().getResource(res) == null;
-        }
+        return false;
     }
 
 }
