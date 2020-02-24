@@ -142,4 +142,13 @@ public class AnnotationProcessorTestUtils {
         }
     }
 
+    /**
+     * Checks whether the version of javac in use suffers from #6929404.
+     * If so, calls to {@code LayerBuilder.validateResource(..., true)} will return normally
+     * even if the resource path does not exist, so tests must be more lenient.
+     */
+    public static boolean searchClasspathBroken() {
+        return false;
+    }
+
 }
