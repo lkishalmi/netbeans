@@ -1,0 +1,4 @@
+test {
+    useTestNG()
+    enabled = false
+}

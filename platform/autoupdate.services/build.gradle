@@ -1,0 +1,16 @@
+nbbuild.generateCopyExternals = false
+
+sourceSets {
+    updater {
+        java.srcDirs = ['libsrc']
+    }
+}
+
+task jarUpdater(type: Jar) {
+    destinationDir = file("{nbproject.clusterBuildDir}/modules/ext/updater.jar")
+    from sourceSets.updater.output
+}
+
+dependencies {
+    implementation sourceSets.updater.output
+}

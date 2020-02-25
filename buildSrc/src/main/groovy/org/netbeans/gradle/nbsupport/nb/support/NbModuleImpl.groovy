@@ -63,7 +63,7 @@ class NbModuleImpl implements NbModule {
                     if (module != null) {
                         dependencies.addAll(module.getMainDependencies())
                     } else {
-                        Syetem.err.println("No module '" + dep.getCodeNameBase() + "' found for : '" + name)
+                        System.err.println("No module '" + dep.getCodeNameBase() + "' found for : '" + name)
                     }
                 }
             }
@@ -82,12 +82,9 @@ class NbModuleImpl implements NbModule {
                     NbModule module = cluster.findInClusters(dep.getCodeNameBase());
                     if (module != null) {
                         def rdeps = dep.isTest() ? module.getTestDependencies(testType) : module.getMainDependencies()
-                        //print "Add recursive deps for $name through ${dep.codeNameBase}: ["
-                        //rdeps.each {print "${it.codeNameBase} "}
-                        //println ']'
                         testDep.addAll(rdeps)
                     } else {
-                        Syetem.err.println("No module '" + dep.getCodeNameBase() + "' found for test : '" + name)
+                        System.err.println("No module '" + dep.getCodeNameBase() + "' found for test : '" + name)
                     }
                 }
             }
