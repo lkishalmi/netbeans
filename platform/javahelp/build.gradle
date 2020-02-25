@@ -1,0 +1,5 @@
+nbbuild.generateCopyExternals = false
+
+dependencies {
+    compileOnly files('external/jhall-2.0_05.jar')
+}

@@ -1,0 +1,5 @@
+def excludedLibs = ['osgi.core-7.0.0.jar']
+
+compileJava {
+    classpath = files(sourceSets.main.compileClasspath.files.findAll() { f -> !excludedLibs.contains(f.name) })
+}
