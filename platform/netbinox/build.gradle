@@ -1,5 +1,5 @@
-def excludedLibs = ['osgi.core-7.0.0.jar']
+def excludedLibs = ['osgi.core-7.0.0.jar','org.eclipse.osgi_3.9.1.nb9.jar']
 
 compileJava {
-    classpath = files(sourceSets.main.compileClasspath.files.findAll() { f -> !excludedLibs.contains(f.name) })
+    classpath = files(sourceSets.main.compileClasspath.files.findAll() { f -> !excludedLibs.contains(f.name) }) + files("${nbproject.moduleDestDir}/ext/osgi.core-7.0.0.jar","${nbproject.moduleDestDir}/ext/org.eclipse.osgi_3.9.1.nb9.jar")
 }
