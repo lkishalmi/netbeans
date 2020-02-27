@@ -7,9 +7,14 @@ sourceSets {
 }
 
 task jarUpdater(type: Jar) {
-    destinationDir = file("{nbproject.clusterBuildDir}/modules/ext/updater.jar")
+    destinationDirectory = file("${nbproject.clusterBuildDir}/modules/ext")
+    archiveFileName = 'updater.jar'
     from sourceSets.updater.output
+    manifest.attributes('NetBeans-Own-Library': 'true')
+    metaInf.from (rootDir) { include 'NOTICE', 'LICENSE' }
 }
+
+assemble.dependsOn(jarUpdater)
 
 dependencies {
     implementation sourceSets.updater.output
