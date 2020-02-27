@@ -10,10 +10,9 @@
 rootProject.name = 'netbeans'
 include 'nbbuild'
 
-//include 'org.netbeans.insane-test'
-//project(':org.netbeans.insane-test').projectDir = new File(rootDir, 'harness/o.n.insane')
-//project(':org.netbeans.insane-test').buildFileName = "build-test.gradle"
-//project(':org.netbeans.insane-test').projectDir = new File(rootDir, 'harness/o.n.insane-test')
+def excludedModules = [
+    'org.openide.util.enumerations'
+]
 
 def clusterDirs = [\
     'apisupport', \
@@ -41,12 +40,14 @@ clusterDirs.each() { cluster ->
             def prj = new XmlSlurper().parse(projectXML)
             if ('org.netbeans.modules.apisupport.project'.equals(prj.type.text())) {
                 def name = prj.configuration.data['code-name-base'].text()
-                include name
-                project(":$name").projectDir = sub
-                def testDir = new File(sub.getParentFile(), "${sub.getName()}-test")
-                if (testDir.isDirectory()) {
-                    include "$name-test"
-                    project(":$name-test").projectDir = testDir
+                if (!excludedModules.contains(name)) {
+                    include name
+                    project(":$name").projectDir = sub
+                    def testDir = new File(sub.getParentFile(), "${sub.getName()}-test")
+                    if (testDir.isDirectory()) {
+                        include "$name-test"
+                        project(":$name-test").projectDir = testDir
+                    }
                 }
             }
         }
