@@ -242,30 +242,35 @@ public final class NamedServiceProcessor extends AbstractServiceProviderProcesso
         }
     }
     
-    private static void searchAnnotations(Set<String> found, boolean canonicalName) {
-
+    private void searchAnnotations(Set<String> found, boolean canonicalName) {
         try {
             Enumeration<URL> en = NamedServiceProcessor.class.getClassLoader().getResources(PATH);
             while (en.hasMoreElements()) {
                 URL url = en.nextElement();
-                InputStream is = url.openStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8")); // NOI18N
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), "UTF-8"))) {
+                    // XXX consider using ServiceLoaderLine instead
+                    while (true) {
+                        String line = reader.readLine();
 
-                // XXX consider using ServiceLoaderLine instead
-                while (true) {
-                    String line = reader.readLine();
-
-                    if (line == null) {
-                        break;
+                        if (line == null) {
+                            break;
+                        }
+                        line = line.trim();
+                        if (line.startsWith("#")) { // NOI18N
+                            continue;
+                        }
+                        if (canonicalName) {
+                            line = line.replace('$', '.');
+                        }
+                        found.add(line);
                     }
-                    line = line.trim();
-                    if (line.startsWith("#")) { // NOI18N
-                        continue;
+                } catch (IOException ie) {
+                    // XXX: Very ugly patch for Gradle builds
+                    if (url.toString().endsWith("/org-openide-util.jar!/META-INF/namedservices.index")) {
+                        found.add("org.openide.util.URLStreamHandlerRegistration");
+                    } else {
+                        processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, "Can't read elements of " + url);
                     }
-                    if (canonicalName) {
-                        line = line.replace('$', '.');
-                    }
-                    found.add(line);
                 }
             }
         } catch (IOException ex) {

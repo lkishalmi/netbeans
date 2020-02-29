@@ -149,7 +149,7 @@ public class NbBundleProcessor extends AbstractProcessor {
             try {
                 EditableProperties p = new EditableProperties(true);
                 // Load any preexisting bundle so we can just add our keys.
-/*                try {
+                try {
                     InputStream is = processingEnv.getFiler().getResource(StandardLocation.SOURCE_PATH, pkg, "Bundle.properties").openInputStream();
                     try {
                         p.load(is);
@@ -158,7 +158,7 @@ public class NbBundleProcessor extends AbstractProcessor {
                     }
                 } catch (IOException x) {
                     // OK, not there
-                }*/
+                }
                 for (String key : p.keySet()) {
                     if (pairs.containsKey(key)) {
                         processingEnv.getMessager().printMessage(Kind.ERROR, "Key " + key + " is a duplicate of one from Bundle.properties", identifiers.get(toIdentifier(key)));
