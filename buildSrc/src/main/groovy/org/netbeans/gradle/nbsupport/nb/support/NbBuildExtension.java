@@ -15,9 +15,16 @@
  */
 package org.netbeans.gradle.nbsupport.nb.support;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.zip.CRC32;
+import org.gradle.tooling.BuildException;
 
 /**
  *
@@ -64,4 +71,14 @@ public final class NbBuildExtension {
         this.generateCopyExternals = generateCopyExternals;
     }
 
+    public String fileCRC32(File file) {
+        CRC32 crc32 = new CRC32();
+        try(FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.READ)) {
+            MappedByteBuffer mbb = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
+            crc32.update(mbb);
+            return Long.toString(crc32.getValue());
+        } catch (IOException ex) {
+            throw new BuildException("Can't caclulate CRC32 as of", ex);
+        }
+    }
 }

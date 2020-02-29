@@ -1,0 +1,21 @@
+nbbuild.generateCopyExternals = false
+
+task rejarCommonsCodec(type: Jar) {
+    from zipTree('external/commons-codec-1.13.jar')
+    destinationDirectory = nbproject.moduleDestDir
+    archiveFileName = 'org-apache-commons-codec.jar'
+    manifest.attributes (
+        'Bundle-SymbolicName': 'org.apache.commons.codec',
+        'Bundle-Version': '1.3.0',
+        'Export-Package': [
+            'org.apache.commons.codec;version="1.3.0"',
+            'org.apache.commons.codec.binary;version="1.3.0"',
+            'org.apache.commons.codec.digest;version="1.3.0"',
+            'org.apache.commons.codec.language;version="1.3.0"',
+            'org.apache.commons.codec.net;version="1.3.0"'
+        ].join(','),
+        "NB-Original-CRC": nbbuild.fileCRC32(file('external/commons-codec-1.13.jar'))
+    )
+}
+
+copyExternals.dependsOn(rejarCommonsCodec)

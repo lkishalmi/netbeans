@@ -1,0 +1,18 @@
+nbbuild.generateCopyExternals = false
+
+task rejarCommonsLogging(type: Jar) {
+    from zipTree('external/commons-logging-1.2.jar')
+    destinationDirectory = nbproject.moduleDestDir
+    archiveFileName = 'org-apache-commons-logging.jar'
+    manifest.attributes (
+        'Bundle-SymbolicName': 'org.apache.commons.logging',
+        'Bundle-Version': '1.2',
+        'Export-Package': [
+            'org.apache.commons.logging;version="1.2"',
+            'org.apache.commons.logging.impl;version="1.2"'
+        ].join(','),
+        "NB-Original-CRC": nbbuild.fileCRC32(file('external/commons-logging-1.2.jar'))
+    )
+}
+
+copyExternals.dependsOn(rejarCommonsLogging)
