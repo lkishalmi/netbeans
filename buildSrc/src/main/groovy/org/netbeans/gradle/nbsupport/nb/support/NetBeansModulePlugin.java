@@ -53,7 +53,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
         //java.setSourceCompatibility(JavaVersion.toVersion(nbproject.getProperty("javac.source")));
         java.setSourceCompatibility(JavaVersion.VERSION_1_8);
-        prepareTestConfigurtion(project);
+        prepareTestConfiguration(project);
         project.setDescription(nbproject.getDisplayName());
         prepareSourceSets(project);
         updateCompileTasks(project);
@@ -95,7 +95,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         test.getResources().exclude("**/*.java");
     }
 
-    private void prepareTestConfigurtion(Project prj) {
+    private void prepareTestConfiguration(Project prj) {
         prj.getConfigurations().create("testApi");
 
         SourceSetContainer ss = prj.getExtensions().getByType(SourceSetContainer.class);
@@ -116,12 +116,14 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             dh.add("api", prj.files(new File(nbProject.getModuleDestDir(), ext)));
         }
 
-        for (NbModule.Dependency dependency : module.getMainDependencies()) {
-            Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
-            dh.add("implementation", dprj);
-            if (dependency.isBuildPrerequisite() || nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
-                dh.add("annotationProcessor", dprj);
-                dh.add("testAnnotationProcessor", dprj);
+        if (!nbProject.isTestOnly()) {
+            for (NbModule.Dependency dependency : module.getDependencies(NbModule.DependencyType.MAIN)) {
+                Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
+                dh.add("implementation", dprj);
+                if (dependency.isBuildPrerequisite() || nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
+                    dh.add("annotationProcessor", dprj);
+                    dh.add("testAnnotationProcessor", dprj);
+                }
             }
         }
 
@@ -134,7 +136,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             dh.add("testAnnotationProcessor", prj.files(jar.getArchiveFile()));
         }
 
-        Set<? extends NbModule.Dependency> unitTestDeps = module.getTestDependencies("unit");
+        Set<? extends NbModule.Dependency> unitTestDeps = module.getDependencies(NbModule.DependencyType.TEST_UNIT);
         for (NbModule.Dependency dependency : unitTestDeps) {
             if (dependency.isTest()) {
                 Project dprj = prj.findProject(":" + dependency.getCodeNameBase() + "-test");
@@ -207,6 +209,9 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         if (nbproject.getProperty(NbProjectExtension.TEST_EXCLUDES) != null) {
             String[] excludes = nbproject.getProperty(NbProjectExtension.TEST_EXCLUDES).split(",");
             test.exclude(excludes);
+        }
+        for (Map.Entry<String, String> prop : nbproject.getTestProperties("unit").entrySet()) {
+            test.systemProperty(prop.getKey(), prop.getValue());
         }
         test.systemProperty("xtest.data", new File(prj.getBuildDir(), "test/unit/data").getAbsolutePath());
         test.systemProperty("nbjunit.workdir", new File(prj.getBuildDir(), "test/unit/work").getAbsolutePath());
