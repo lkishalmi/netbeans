@@ -22,13 +22,9 @@ import groovy.util.XmlSlurper
  *
  * @author lkishalmi
  */
-class NbModuleImpl implements NbModule {
+class NbModuleImpl extends NbModule {
 
-    final NbCluster cluster;
     final String relPath;
-
-    private boolean mainResolved = false;
-    private boolean testResolved = false;
 
     Map<String, String> classPathExtentions = new LinkedHashMap<>();
     Set<? extends NbModule.Dependency> dependencies = new LinkedHashSet<>();
@@ -37,8 +33,8 @@ class NbModuleImpl implements NbModule {
     String name
     
     public NbModuleImpl(NbCluster cluster, String relPath) {
+        super(cluster);
         this.relPath = relPath;
-        this.cluster = cluster;
     }
     
     File getModuleDir() {
@@ -53,42 +49,13 @@ class NbModuleImpl implements NbModule {
         return classPathExtentions;
     }
     
-    Set<? extends NbModule.Dependency> getMainDependencies() {
-        if (!mainResolved) {
-            LinkedList<? extends NbModule.Dependency> temp = new LinkedList(dependencies);
-            mainResolved = true;
-            for (NbModule.Dependency dep: temp) {
-                if (dep.isRecursive()) {
-                    NbModule module = cluster.findInClusters(dep.getCodeNameBase());
-                    if (module != null) {
-                        dependencies.addAll(module.getMainDependencies())
-                    } else {
-                        System.err.println("No module '" + dep.getCodeNameBase() + "' found for : '" + name)
-                    }
-                }
-            }
-        }
+    Set<? extends NbModule.Dependency> getDirectMainDependencies() {
         return dependencies;
     }
 
-    Set<? extends NbModule.Dependency> getTestDependencies(String testType) {
+    Set<? extends NbModule.Dependency> getDirectTestDependencies(String testType) {
         //TODO: This one works on unittest for now.
         Set<? extends NbModule.Dependency> testDep = testDependencies[testType];
-        if ((testDep != null) && !testResolved) {
-            LinkedList<? extends NbModule.Dependency> temp = new LinkedList(testDep);
-            testResolved = true
-            for (NbModule.Dependency dep: temp) {
-                if (dep.isRecursive()) {
-                    NbModule module = cluster.findInClusters(dep.getCodeNameBase());
-                    if (module != null) {
-                        def rdeps = dep.isTest() ? module.getTestDependencies(testType) : module.getMainDependencies()
-                        testDep.addAll(rdeps)
-                    } else {
-                        System.err.println("No module '" + dep.getCodeNameBase() + "' found for test : '" + name)
-                    }
-                }
-            }
-        }
         return testDep != null ? testDep : Collections.emptySet();
     }
 

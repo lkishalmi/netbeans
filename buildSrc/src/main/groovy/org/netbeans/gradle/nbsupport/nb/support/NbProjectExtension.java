@@ -19,6 +19,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
@@ -107,6 +110,17 @@ public final class NbProjectExtension {
 
     public File getModuleDestDir() {
         return new File(clusterBuildDir, properties.getProperty( MODULE_JAR_DIR));
+    }
+
+    public Map<String, String> getTestProperties(String type) {
+        String prefix = "test-" + type + "-sys-prop.";
+        Map<String, String> ret = new HashMap<>();
+        for (String key : properties.stringPropertyNames()) {
+            if (key.startsWith(prefix)) {
+                ret.put(key.substring(prefix.length()), properties.getProperty(key));
+            }
+        }
+        return ret.isEmpty() ? Collections.emptyMap() : ret;
     }
     
     public String getDisplayName() {
