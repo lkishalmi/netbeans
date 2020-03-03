@@ -29,8 +29,8 @@ class NbModuleImpl extends NbModule {
     Map<String, String> classPathExtentions = new LinkedHashMap<>();
     Set<? extends NbModule.Dependency> dependencies = new LinkedHashSet<>();
     Map<String, Set<? extends NbModule.Dependency>> testDependencies = new HashMap<>();
-    
-    String name
+    List<String> publicPackages = Collections.emptyList();
+    String codeNameBase;
     
     public NbModuleImpl(NbCluster cluster, String relPath) {
         super(cluster);
@@ -41,10 +41,14 @@ class NbModuleImpl extends NbModule {
         return new File(cluster.dir, relPath);
     }
 
-    String getName() {
-        return name;
+    String getCodeNameBase() {
+        return codeNameBase;
     }
 
+    List<String> getPublicPackages() {
+        return publicPackages;
+    }
+    
     Map<String, String> getClassPathExtensions() {
         return classPathExtentions;
     }
@@ -64,7 +68,7 @@ class NbModuleImpl extends NbModule {
         if (projectXML.canRead()) {
             def prj = new XmlSlurper().parse(projectXML)
             if ('org.netbeans.modules.apisupport.project'.equals(prj.type.text())) {
-                name = prj.configuration.data['code-name-base'].text()
+                codeNameBase = prj.configuration.data['code-name-base'].text()
             }
             prj.configuration.data['module-dependencies'].dependency.each { dependency ->
                 Dependency dep = new Dependency(dependency['code-name-base'].toString())
@@ -81,11 +85,12 @@ class NbModuleImpl extends NbModule {
                 }
                 dependencies.add(dep)
             }
+
             prj.configuration.data['test-dependencies']['test-type'].each { testType -> 
                 def typeName = testType.name.toString()
                 def deps = []
                 testType['test-dependency'].each { dependency ->
-                    if (dependency['code-name-base'].toString() != name) {
+                    if (dependency['code-name-base'].toString() != codeNameBase) {
                         Dependency dep = new Dependency(dependency['code-name-base'].toString())
                         dep.buildPrerequisite = !dependency['build-prerequisite'].isEmpty()
                         dep.compileDependency = !dependency['compile-dependency'].isEmpty()
@@ -104,11 +109,18 @@ class NbModuleImpl extends NbModule {
                 }
                 testDependencies[typeName] = deps
             }
-           prj.configuration.data['class-path-extension'].each { cpe ->
-               String relPath = cpe['runtime-relative-path']
-               String origin = cpe['binary-origin']
-               classPathExtentions.put(relPath, origin)
-           }
+            prj.configuration.data['class-path-extension'].each { cpe ->
+                String relPath = cpe['runtime-relative-path']
+                String origin = cpe['binary-origin']
+                classPathExtentions.put(relPath, origin)
+            }
+            List<String> pkgs = new LinkedList<>();
+            prj.configuration.data['public-packages'].each { pp ->
+                pkgs.add(String.valueOf(pp['package']));
+            }
+            if (!pkgs.empty) {
+                publicPackages = pkgs;
+            }
         } else {
             return false
         }
@@ -116,7 +128,7 @@ class NbModuleImpl extends NbModule {
     }
 
     void printDependencies() {
-        println "--- $name dependencies ---"
+        println "--- $codeNameBase dependencies ---"
         println 'Standard:'
         dependencies.each { dep -> println "    $dep" }
         println 'Test:'
@@ -131,17 +143,13 @@ class NbModuleImpl extends NbModule {
         boolean compileDependency;
         boolean recursive;
         boolean test;
-        String releaseVersion = '0'
+        String releaseVersion = '';
         String specificationVersion = ''
         
         Dependency(String name) {
             codeNameBase = name
         }
 
-        public String getCodeNameBase() {
-            return codeNameBase;
-        }
-        
         String toString() {
             return "$codeNameBase:$releaseVersion:$specificationVersion - test: $test, recursive: $recursive"
         }

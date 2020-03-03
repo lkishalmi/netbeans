@@ -61,7 +61,7 @@ public class Clusters {
                 for (String module : modules) {
                     NbModuleImpl nbm = new NbModuleImpl(cluster, module.trim());
                     if (nbm.resolve()) {
-                        ret.modulesByName.put(nbm.getName(), nbm);        
+                        ret.modulesByName.put(nbm.getCodeNameBase(), nbm);
                         cluster.modules.add(nbm);
                     }
                 }

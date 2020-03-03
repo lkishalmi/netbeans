@@ -41,9 +41,12 @@ public final class NbProjectExtension {
     boolean testOnly;
     final File mainProjectDir;
     final File clusterBuildDir;
+    final File testDistBaseDir;
     final String cluster;
     final Properties properties = new Properties();
     final Properties bundle = new Properties();
+    final Manifest manifest;
+    final boolean osgiMode;
 
     public NbProjectExtension(Project project) {
         properties.setProperty(MODULE_JAR_DIR, "modules");
@@ -56,6 +59,7 @@ public final class NbProjectExtension {
         mainProjectDir = !testOnly ? projectDir : new File(projectDir.getParentFile(), projectDirName.substring(0, projectDirName.length()-5));
         cluster = projectDir.getParentFile().getName();
         clusterBuildDir = new File(project.getRootDir(), "build/netbeans/" + cluster);
+        testDistBaseDir = new File(project.getRootDir(), "build/testdist");
         File propsFile = new File(mainProjectDir, "nbproject/project.properties");
         if (propsFile.isFile()) {
             try (InputStream is = new FileInputStream(propsFile)) {
@@ -64,12 +68,22 @@ public final class NbProjectExtension {
 
             }
         }
-        Manifest mf = new Manifest();
+
+        manifest = new Manifest();
         try (InputStream is = new FileInputStream(new File(mainProjectDir, "manifest.mf"))) {
-            mf.read(is);
+            manifest.read(is);
         } catch (IOException ex) {
         }
-        Attributes mainAttributes = mf.getMainAttributes();
+        Attributes mainAttributes = manifest.getMainAttributes();
+
+        String myself = mainAttributes.getValue("OpenIDE-Module");
+        if (myself == null) {
+            myself = mainAttributes.getValue("Bundle-SymbolicName");
+            osgiMode = myself != null;
+        } else {
+            osgiMode = false;
+        }
+
         String localizingBundle = mainAttributes.getValue("OpenIDE-Module-Localizing-Bundle");
         if (localizingBundle != null) {
             try (InputStream is = new FileInputStream(new File(mainProjectDir, "src/" + localizingBundle))) {
@@ -88,6 +102,18 @@ public final class NbProjectExtension {
         return testOnly;
     }
 
+    public boolean isAutoLoad() {
+        return Boolean.parseBoolean(properties.getProperty("is.autoload", "false"));
+    }
+
+    public boolean isEager() {
+        return Boolean.parseBoolean(properties.getProperty("is.eager", "false"));
+    }
+
+    public boolean isOsgiMode() {
+        return osgiMode;
+    }
+    
     public Properties getProperties() {
         return properties;
     }
@@ -99,7 +125,11 @@ public final class NbProjectExtension {
     public Properties getBundle() {
         return bundle;
     }
-    
+
+    public Manifest getManifest() {
+        return manifest;
+    }
+
     public String getCluster() {
         return cluster;
     }
@@ -110,6 +140,10 @@ public final class NbProjectExtension {
 
     public File getModuleDestDir() {
         return new File(clusterBuildDir, properties.getProperty( MODULE_JAR_DIR));
+    }
+
+    public File getTestDestBaseDir(String type) {
+        return new File(testDistBaseDir, type + '/' + cluster);
     }
 
     public Map<String, String> getTestProperties(String type) {

@@ -18,6 +18,7 @@ package org.netbeans.gradle.nbsupport.nb.support;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -36,9 +37,10 @@ public abstract class NbModule {
         this.cluster = cluster;
     }
 
-    public abstract String getName();
+    public abstract String getCodeNameBase();
 
     abstract Map<String, String> getClassPathExtensions();
+    abstract List<String> getPublicPackages();
 
     Set<Dependency> getDependencies(DependencyType type) {
         Set<Dependency> ret = depCache.get(type);
@@ -54,13 +56,13 @@ public abstract class NbModule {
             }
             for (Dependency dep: directDeps) {
                 ret.add(dep);
-                if (!dep.getCodeNameBase().equals(getName()) && dep.isRecursive()) {
+                if (!dep.getCodeNameBase().equals(getCodeNameBase()) && dep.isRecursive()) {
                     NbModule m = cluster.findInClusters(dep.getCodeNameBase());
                     if (m != null) {
                         Set<Dependency> mdeps = m.getDependencies(dep.isTest() ? DependencyType.TEST_UNIT : DependencyType.MAIN);
                         ret.addAll(mdeps);
                     } else {
-                        throw new IllegalStateException("No module '" + dep.getCodeNameBase() + "' as a depencency of: " + getName());
+                        throw new IllegalStateException("No module '" + dep.getCodeNameBase() + "' as a depencency of: " + getCodeNameBase());
                     }
                 }
             }
@@ -79,5 +81,7 @@ public abstract class NbModule {
         boolean isCompileDependency();
         boolean isTest();
         boolean isRecursive();
+        String getReleaseVersion();
+        String getSpecificationVersion();
     }
 }

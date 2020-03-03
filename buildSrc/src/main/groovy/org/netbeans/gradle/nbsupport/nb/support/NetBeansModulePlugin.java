@@ -25,6 +25,7 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.CopySpec;
+import org.gradle.api.java.archives.Attributes;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.plugins.internal.JvmPluginsHelper;
 import org.gradle.api.tasks.Copy;
@@ -33,6 +34,8 @@ import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.tasks.Jar;
+
+import static org.netbeans.gradle.nbsupport.nb.support.NbProjectExtension.*;
 
 /**
  *
@@ -53,7 +56,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
         //java.setSourceCompatibility(JavaVersion.toVersion(nbproject.getProperty("javac.source")));
         java.setSourceCompatibility(JavaVersion.VERSION_1_8);
-        prepareTestConfiguration(project);
+        prepareTestConfiguration(project, nbproject);
         project.setDescription(nbproject.getDisplayName());
         prepareSourceSets(project);
         updateCompileTasks(project);
@@ -65,13 +68,13 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             Task copyExt = project.getTasks().create("copyExternals");
             project.afterEvaluate((Project prj) -> {
                 copyExternals(prj, nbproject, module);
+                if (!nbproject.isTestOnly()) {
+                    updateJarTask(project, nbproject, module);
+                }
+                updateTestTask(project, nbproject);
             });
             copyTestData(project, nbproject, module);
             prepareDependencies(project, nbproject, module);
-            if (!nbproject.isTestOnly()) {
-                updateJarTask(project, nbproject);
-            }
-            updateTestTask(project, nbproject);
         }
     }
 
@@ -95,12 +98,14 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         test.getResources().exclude("**/*.java");
     }
 
-    private void prepareTestConfiguration(Project prj) {
+    private void prepareTestConfiguration(Project prj, NbProjectExtension nbprj) {
         prj.getConfigurations().create("testApi");
 
         SourceSetContainer ss = prj.getExtensions().getByType(SourceSetContainer.class);
         SourceSet test = ss.getByName("test");
         Jar jar = prj.getTasks().create("jarTest", Jar.class);
+        jar.getDestinationDirectory().set(new File(nbprj.getTestDestBaseDir("unit"), prj.getName().replace('.', '-')));
+        jar.getArchiveFileName().set("tests.jar");
         jar.dependsOn("testClasses");
         jar.from(test.getOutput());
         jar.getArchiveClassifier().set("test");
@@ -128,7 +133,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         }
 
         if (nbProject.isTestOnly()) {
-            Project dprj = prj.findProject(":" + module.getName());
+            Project dprj = prj.findProject(":" + module.getCodeNameBase());
             dh.add("testImplementation", dprj);
             dh.add("testAnnotationProcessor", dprj);
         } else {
@@ -180,17 +185,50 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         prj.getTasks().findByName("test").dependsOn(copy);
     }
 
-    private void updateJarTask(Project prj, NbProjectExtension nbproject) {
+    private void updateJarTask(Project prj, NbProjectExtension nbproject, NbModule module) {
         Jar jar = (Jar) prj.getTasks().findByName("jar");
         if (jar != null) {
             jar.getDestinationDirectory().set(nbproject.getModuleDestDir());
-            String jarName = nbproject.getProperty(NbProjectExtension.MODULE_JAR_NAME);
+            String jarName = nbproject.getProperty(MODULE_JAR_NAME);
             jarName = jarName != null ? jarName : prj.getName().replace('.', '-') + ".jar";
             jar.getArchiveFileName().set(jarName);
             jar.getManifest().from(new File(nbproject.getMainProjectDir(), "manifest.mf"));
             jar.getMetaInf().from(prj.getRootDir(), (CopySpec spec) -> {
                 spec.include("NOTICE", "LICENSE");
             });
+
+            Attributes attrs = jar.getManifest().getAttributes();
+            if (nbproject.isOsgiMode()) {
+                attrs.put("Bundle-ManifestVersion", "2");
+                prj.getLogger().info("OSGI Support is weak for: " + module.getCodeNameBase(), module);
+            } else if (!"lib".equals(nbproject.getProperty(MODULE_JAR_DIR))) {
+                String key = "OpenIDE-Module-Requires";
+                String token = "org.openide.modules.ModuleFormat1";
+                String requires = nbproject.getManifest().getMainAttributes().getValue(key);
+                String newRequires;
+                if (requires != null) {
+                    newRequires = requires + ", " + token;
+                } else {
+                    newRequires = token;
+                }
+                attrs.put(key, newRequires);
+            }
+
+            if (!nbproject.isOsgiMode()) {
+                attrs.put("OpenIDE-Module-Public-Packages", openideModulePublicPackages(module));
+                attrs.put("OpenIDE-Module-Module-Dependencies", openideModuleModuleDependencies(module.getDirectMainDependencies()));
+                attrs.put("OpenIDE-Module-Java-Dependencies", "Java > 1.8");
+            }
+
+            boolean showInClient = !nbproject.isAutoLoad() && !nbproject.isEager()
+                    && "module".equals(nbproject.getProperty(MODULE_JAR_DIR));
+            attrs.put("AutoUpdate-Show-In-Client", Boolean.toString(showInClient));
+
+            attrs.put("OpenIDE-Module-Implementation-Version", prj.getVersion());
+            String cp = classPathEntry(module);
+            if (!cp.isEmpty()) {
+                attrs.put("Class-Path", cp);
+            }
         }
         jar.setEnabled(prj.file("src").isDirectory());
     }
@@ -204,10 +242,10 @@ public class NetBeansModulePlugin implements Plugin<Project> {
 
     private void updateTestTask(Project prj, NbProjectExtension nbproject) {
         Test test = (Test) prj.getTasks().findByName("test");
-        String[] includes = nbproject.getProperty(NbProjectExtension.TEST_INCLUDES).split(",");
+        String[] includes = nbproject.getProperty(TEST_INCLUDES).split(",");
         test.include(includes);
-        if (nbproject.getProperty(NbProjectExtension.TEST_EXCLUDES) != null) {
-            String[] excludes = nbproject.getProperty(NbProjectExtension.TEST_EXCLUDES).split(",");
+        if (nbproject.getProperty(TEST_EXCLUDES) != null) {
+            String[] excludes = nbproject.getProperty(TEST_EXCLUDES).split(",");
             test.exclude(excludes);
         }
         for (Map.Entry<String, String> prop : nbproject.getTestProperties("unit").entrySet()) {
@@ -216,5 +254,43 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         test.systemProperty("xtest.data", new File(prj.getBuildDir(), "test/unit/data").getAbsolutePath());
         test.systemProperty("nbjunit.workdir", new File(prj.getBuildDir(), "test/unit/work").getAbsolutePath());
         test.systemProperty("nbjunit.hard.timeout", "600000");
+    }
+
+    private static String openideModulePublicPackages(NbModule module) {
+        if (module.getPublicPackages().isEmpty()) return "-";
+        StringBuilder sb = new StringBuilder();
+        String separator = "";
+        for (String pkg : module.getPublicPackages()) {
+            sb.append(separator);
+            sb.append(pkg).append(".*");
+            separator = ", ";
+        }
+        return sb.toString();
+    }
+
+    private static String openideModuleModuleDependencies(Set<? extends NbModule.Dependency> deps) {
+        if (deps.isEmpty()) return "-";
+        StringBuilder sb = new StringBuilder();
+        String separator = "";
+        for (NbModule.Dependency dep : deps) {
+            sb.append(separator);
+            sb.append(dep.getCodeNameBase());
+            if (dep.getReleaseVersion() != null && dep.getReleaseVersion().isEmpty()) {
+                sb.append('/').append(dep.getReleaseVersion());
+            }
+            sb.append(" > ").append(dep.getSpecificationVersion());
+            separator = ", ";
+        }
+        return sb.toString();
+    }
+
+    private static String classPathEntry(NbModule module) {
+        StringBuilder sb = new StringBuilder();
+        String separator = "";
+        for (String cp : module.getClassPathExtensions().keySet()) {
+            sb.append(separator).append(cp);
+            separator = " ";
+        }
+        return sb.toString();
     }
 }
