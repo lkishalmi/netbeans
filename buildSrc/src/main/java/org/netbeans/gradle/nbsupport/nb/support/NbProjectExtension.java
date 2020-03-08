@@ -21,10 +21,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
+import javax.xml.stream.XMLEventReader;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.events.EndElement;
+import javax.xml.stream.events.StartElement;
+import javax.xml.stream.events.XMLEvent;
 import org.gradle.api.Project;
 
 /**
@@ -43,17 +54,14 @@ public final class NbProjectExtension {
     final File clusterBuildDir;
     final File testDistBaseDir;
     final String cluster;
-    final Properties properties = new Properties();
-    final Properties bundle = new Properties();
-    final Manifest manifest;
-    final String implementationVersion;
-    final boolean osgiMode;
+    Properties cachedProperties;
+    Properties cachedBundle;
+    Manifest cachedManifest;
+    NbModule module;
+    final Project project;
 
     public NbProjectExtension(Project project) {
-        properties.setProperty(MODULE_JAR_DIR, "modules");
-        properties.setProperty(TEST_INCLUDES, "**/*Test.class");
-        properties.setProperty("javac.source", "1.8");
-
+        this.project = project;
         File projectDir = project.getProjectDir();
         String projectDirName = projectDir.getName();
         testOnly = projectDirName.endsWith("-test");
@@ -61,39 +69,6 @@ public final class NbProjectExtension {
         cluster = projectDir.getParentFile().getName();
         clusterBuildDir = new File(project.getRootDir(), "build/netbeans/" + cluster);
         testDistBaseDir = new File(project.getRootDir(), "build/testdist");
-        File propsFile = new File(mainProjectDir, "nbproject/project.properties");
-        if (propsFile.isFile()) {
-            try (InputStream is = new FileInputStream(propsFile)) {
-                properties.load(is);
-            } catch (IOException ex) {
-
-            }
-        }
-
-        manifest = new Manifest();
-        try (InputStream is = new FileInputStream(new File(mainProjectDir, "manifest.mf"))) {
-            manifest.read(is);
-        } catch (IOException ex) {
-        }
-        Attributes mainAttributes = manifest.getMainAttributes();
-
-        String myself = mainAttributes.getValue("OpenIDE-Module");
-        if (myself == null) {
-            myself = mainAttributes.getValue("Bundle-SymbolicName");
-            osgiMode = myself != null;
-        } else {
-            osgiMode = false;
-        }
-
-        implementationVersion = mainAttributes.getValue("OpenIDE-Module-Implementation-Version");
-        String localizingBundle = mainAttributes.getValue("OpenIDE-Module-Localizing-Bundle");
-        if (localizingBundle != null) {
-            try (InputStream is = new FileInputStream(new File(mainProjectDir, "src/" + localizingBundle))) {
-                bundle.load(is);
-            } catch (IOException ex ) {
-
-            }
-        }
     }
 
     public File getMainProjectDir() {
@@ -105,35 +80,86 @@ public final class NbProjectExtension {
     }
 
     public boolean isAutoLoad() {
-        return Boolean.parseBoolean(properties.getProperty("is.autoload", "false"));
+        return Boolean.parseBoolean(getProperty("is.autoload"));
     }
 
     public boolean isEager() {
-        return Boolean.parseBoolean(properties.getProperty("is.eager", "false"));
+        return Boolean.parseBoolean(getProperty("is.eager"));
     }
 
     public boolean isOsgiMode() {
-        return osgiMode;
+        Manifest mf = getManifest();
+        Attributes attrs = mf.getMainAttributes();
+        return attrs.getValue("OpenIDE-Module") == null && attrs.getValue("Bundle-SymbolicName") != null;
     }
-    
+
+    public NbModule getModule() {
+        if (module == null) {
+            File projectXml = new File(mainProjectDir, "nbproject/project.xml");
+            module = parseProjectXML(projectXml);
+        }
+        return module;
+    }
+
     public Properties getProperties() {
-        return properties;
+        if (cachedProperties == null) {
+            Properties ret = new Properties();
+            ret.setProperty(MODULE_JAR_DIR, "modules");
+            ret.setProperty(TEST_INCLUDES, "**/*Test.class");
+            ret.setProperty("javac.source", "1.8");
+
+            File propsFile = new File(mainProjectDir, "nbproject/project.properties");
+            if (propsFile.isFile()) {
+
+                try (InputStream is = new FileInputStream(propsFile)) {
+                    ret.load(is);
+                } catch (IOException ex) {
+
+                }
+            }
+            cachedProperties = ret;
+        }
+        return cachedProperties;
     }
 
     public String getProperty(String key) {
-        return properties.getProperty(key);
+        return getProperties().getProperty(key);
     }
 
     public Properties getBundle() {
-        return bundle;
+        if (cachedBundle == null) {
+            Properties ret = new Properties();
+            Manifest mf = getManifest();
+            Attributes attrs = mf.getMainAttributes();
+            String localizingBundle = attrs.getValue("OpenIDE-Module-Localizing-Bundle");
+            if (localizingBundle != null) {
+                try (InputStream is = new FileInputStream(new File(mainProjectDir, "src/" + localizingBundle))) {
+                    ret.load(is);
+                } catch (IOException ex ) {
+
+                }
+            }
+            cachedBundle = ret;
+        }
+        return cachedBundle;
     }
 
     public Manifest getManifest() {
-        return manifest;
+        if (cachedManifest == null) {
+            Manifest ret = new Manifest();
+            try (InputStream is = new FileInputStream(new File(mainProjectDir, "manifest.mf"))) {
+                ret.read(is);
+            } catch (IOException ex) {
+            }
+            cachedManifest = ret;
+        }
+        return cachedManifest;
     }
 
     public String getImplementationVersion() {
-        return implementationVersion;
+        Manifest mf = getManifest();
+        Attributes attrs = mf.getMainAttributes();
+        return attrs.getValue("OpenIDE-Module-Implementation-Version");
     }
 
     public String getCluster() {
@@ -145,7 +171,7 @@ public final class NbProjectExtension {
     }
 
     public File getModuleDestDir() {
-        return new File(clusterBuildDir, properties.getProperty( MODULE_JAR_DIR));
+        return new File(clusterBuildDir, getProperty( MODULE_JAR_DIR));
     }
 
     public File getTestDestBaseDir(String type) {
@@ -155,16 +181,188 @@ public final class NbProjectExtension {
     public Map<String, String> getTestProperties(String type) {
         String prefix = "test-" + type + "-sys-prop.";
         Map<String, String> ret = new HashMap<>();
-        for (String key : properties.stringPropertyNames()) {
+        for (String key : getProperties().stringPropertyNames()) {
             if (key.startsWith(prefix)) {
-                ret.put(key.substring(prefix.length()), properties.getProperty(key));
+                ret.put(key.substring(prefix.length()), getProperty(key));
             }
         }
         return ret.isEmpty() ? Collections.emptyMap() : ret;
     }
     
     public String getDisplayName() {
-        String moduleName = bundle.getProperty("OpenIDE-Module-Name");
+        String moduleName = getBundle().getProperty("OpenIDE-Module-Name");
         return testOnly ? moduleName + " Test" : moduleName;
+    }
+
+    NbModule parseProjectXML(File f) {
+        NbModule ret = null;
+        XMLInputFactory factory = XMLInputFactory.newFactory();
+        try (InputStream is = new FileInputStream(f)) {
+            XMLEventReader events = factory.createXMLEventReader(is);
+            ret = new NbModule(project);
+            while (events.hasNext()) {
+                XMLEvent tag = events.nextEvent();
+                if (tag.isStartElement() && "data".equals(tag.asStartElement().getName().getLocalPart())) {
+                    processData(events, ret);
+                }
+            }
+        } catch (IOException|XMLStreamException ex) {
+            ex.printStackTrace();
+        }
+        return ret;
+    }
+
+    private static void processData(XMLEventReader events, NbModule module) throws XMLStreamException {
+        Map<String, String> cpExtension = new LinkedHashMap<>();
+        List<String> publicPackages = new LinkedList<>();
+        List<String> friendPackages = new LinkedList<>();
+        List<String> friendModules = new LinkedList<>();
+        while(events.hasNext()) {
+            XMLEvent evt = events.nextEvent();
+            if (evt.isStartElement()) {
+                StartElement element = evt.asStartElement();
+                String tag = element.getName().getLocalPart();
+                switch (tag) {
+                    case "code-name-base":
+                        module.codeNameBase = events.getElementText();
+                        break;
+                    case "module-dependencies":
+                        module.directMainDependencies = processDependencies(events, "module-dependencies", "dependency");
+                        break;
+                    case "test-dependencies":
+                        processTestDependencies(events, module);
+                        break;
+                    case "class-path-extension":
+                        String relPath = null;
+                        String origin = null;
+                        while (events.hasNext()) {
+                            XMLEvent nevt = events.nextEvent();
+                            if (nevt.isStartElement()) {
+                                String ntag = nevt.asStartElement().getName().getLocalPart();
+                                switch (ntag) {
+                                    case "runtime-relative-path":
+                                        relPath = events.getElementText();
+                                        break;
+                                    case "binary-origin":
+                                        origin = events.getElementText();
+                                        break;
+                                }
+                            }
+                            if (nevt.isEndElement() && nevt.asEndElement().getName().equals(element.getName())) break;
+                        }
+                        cpExtension.put(relPath, origin);
+                        break;
+                    case "public-packages":
+                        while (events.hasNext()) {
+                            XMLEvent nevt = events.nextEvent();
+                            if (nevt.isStartElement()) {
+                                String ntag = nevt.asStartElement().getName().getLocalPart();
+                                if ("package".equals(ntag)) {
+                                    publicPackages.add(events.getElementText());
+                                }
+                            }
+                            if (nevt.isEndElement() && nevt.asEndElement().getName().equals(element.getName())) break;
+                        }
+                        break;
+                    case "friend-packages":
+                        while (events.hasNext()) {
+                            XMLEvent nevt = events.nextEvent();
+                            if (nevt.isStartElement()) {
+                                String ntag = nevt.asStartElement().getName().getLocalPart();
+                                switch (ntag) {
+                                    case "friend":
+                                        friendModules.add(events.getElementText());
+                                        break;
+                                    case "package":
+                                        friendPackages.add(events.getElementText());
+                                        break;
+                                }
+                            }
+                            if (nevt.isEndElement() && nevt.asEndElement().getName().equals(element.getName())) break;
+                        }
+                        break;
+                }
+            }
+            if (evt.isEndElement() && "data".equals(evt.asEndElement().getName().getLocalPart())) break;
+        }
+        if (!cpExtension.isEmpty()) {
+            module.classPathExtensions = cpExtension;
+        }
+        if (!publicPackages.isEmpty()) {
+            module.publicPackages = publicPackages;
+        }
+        if (!friendPackages.isEmpty()) {
+            module.friendPackages = friendPackages;
+        }
+        if (!friendModules.isEmpty()) {
+            module.friendModules = friendModules;
+        }
+    }
+
+    private static void processTestDependencies(XMLEventReader events, NbModule module) throws XMLStreamException {
+        while(events.hasNext()) {
+            XMLEvent evt = events.nextEvent();
+            if (evt.isStartElement()) {
+                StartElement element = evt.asStartElement();
+                String tag = element.getName().getLocalPart();
+                if (tag.equals("name")) {
+                    String testType = events.getElementText();
+                    Set<NbModule.Dependency> deps = processDependencies(events, "test-type", "test-dependency");
+                    module.directTestDependencies.put(testType, deps);
+                }
+            }
+            if (evt.isEndElement() && "test-dependencies".equals(evt.asEndElement().getName().getLocalPart())) break;
+        }
+    }
+
+    private static Set<NbModule.Dependency> processDependencies(XMLEventReader events, String endTag, String dependencyTag) throws XMLStreamException {
+        Set<NbModule.Dependency> ret = new LinkedHashSet<>();
+        NbModule.Dependency dep = null;
+        while(events.hasNext()) {
+            XMLEvent evt = events.nextEvent();
+            if (evt.isStartElement()) {
+                StartElement startElement = evt.asStartElement();
+                String tag = startElement.getName().getLocalPart();
+                if (tag.equals(dependencyTag)) {
+                    dep = new NbModule.Dependency();
+                } else {
+                    switch (tag) {
+                        case "code-name-base":
+                            dep.codeNameBase = events.getElementText();
+                            break;
+                        case "build-prerequisite":
+                            dep.buildRequisite = true;
+                            break;
+                        case "compile-dependency":
+                            dep.compileDependency = true;
+                            break;
+                        case "recursive":
+                            dep.recursive = true;
+                            break;
+                        case "test":
+                            dep.test = true;
+                            break;
+                        case "implementation-version":
+                            dep.implementationVersion = true;
+                            break;
+                        case "release-version":
+                            dep.releaseVersion = events.getElementText();
+                            break;
+                        case "specification-version":
+                            dep.specificationVersion = events.getElementText();
+                            break;
+                        default:
+                    }
+                }
+            }
+            if (evt.isEndElement()) {
+                EndElement endElement = evt.asEndElement();
+                String tag = endElement.getName().getLocalPart();
+                if (tag.equals(dependencyTag)) {
+                    ret.add(dep);
+                } else if (tag.equals(endTag)) break;
+            }
+        }
+        return ret;
     }
 }

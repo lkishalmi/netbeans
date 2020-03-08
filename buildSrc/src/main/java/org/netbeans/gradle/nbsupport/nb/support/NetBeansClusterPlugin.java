@@ -27,20 +27,36 @@ public class NetBeansClusterPlugin implements Plugin<Project>{
 
     @Override
     public void apply(Project project) {
-        Clusters clusters = Clusters.loadClusters(project.getRootDir());
-        project.getExtensions().add("clusters", clusters);
-        project.getSubprojects().forEach((Project subproject) -> {
+        for (Project subproject : project.getSubprojects()) {
+            NbBuildExtension nbbuild = new NbBuildExtension();
+            NbProjectExtension nbproject = new NbProjectExtension(subproject);
+            subproject.getExtensions().add("nbbuild", nbbuild);
+            subproject.getExtensions().add("nbproject", nbproject);
+        }
+        for (Project subproject : project.getSubprojects()) {
             subproject.getPluginManager().apply(NetBeansModulePlugin.class);
-        });
-        clusters.clusters.forEach((String name, NbCluster cluster) -> {
-            Task task = project.getTasks().create("build" + capitalize(name) + "Cluster");
-            for (DependencyItem<? extends NbCluster> dependency : cluster.getDependencies()) {
-                task.dependsOn("build" + capitalize(dependency.getName()) + "Cluster");
+        }
+        NbClusterContainer clusters = project.getObjects().newInstance(DefaultNbClusterContainer.class, project);
+        project.getExtensions().add("clusters", clusters);
+        project.afterEvaluate((Project prj) -> {
+            NbClusterContainer c = prj.getExtensions().getByType(NbClusterContainer.class);
+            for (NbCluster cluster : c) {
+                prj.getTasks().register(getClusterBuildTask(cluster.getName()), (Task task) -> {
+                    task.setGroup("build");
+                    task.setDescription("Assembles and test the NetBeans " + cluster.getName() + " cluster");
+                    for (DependencyItem<? extends NbCluster> dep : cluster.getDependencies()) {
+                        task.dependsOn(getClusterBuildTask(dep.getName()));
+                    }
+                    for (String module : cluster.modules) {
+                        task.dependsOn(":" + module + ":build");
+                    }
+                });
             }
-            for (NbModule module : cluster.modules) {
-                task.dependsOn(":" + module.getCodeNameBase() + ":build");
-            }
         });
+    }
+
+    private static String getClusterBuildTask(String clusterName) {
+        return "build" + capitalize(clusterName) + "Cluster";
     }
 
     private static String capitalize(String s) {

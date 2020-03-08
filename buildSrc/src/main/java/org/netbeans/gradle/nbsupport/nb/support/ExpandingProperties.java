@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 lkishalmi.
+ * Copyright 2020 lkishalmi.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,29 +15,25 @@
  */
 package org.netbeans.gradle.nbsupport.nb.support;
 
-import java.io.File;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  *
  * @author lkishalmi
  */
-public class NbCluster extends DependencyItem<NbCluster>{
-    
-    final Set<String> modules = new LinkedHashSet<>();
-    final File dir;
+final class ExpandingProperties extends Properties {
 
-    public NbCluster(String name, File dir) {
-        super(name);
-        this.dir = dir;
+    private static final Pattern REPL = Pattern.compile("\\$\\{([a-zA-Z_0-9.]+)\\}");
+
+    @Override
+    public String getProperty(String key) {
+        StringBuilder sb = new StringBuilder(super.getProperty(key));
+        for (Matcher m; (m = REPL.matcher(sb)).find();) {
+            sb.replace(m.start(), m.end(), super.getProperty(m.group(1)));
+        }
+        return sb.toString();
     }
 
-    public void project(String project) {
-        modules.add(project);
-    }
-
-    public File getDir() {
-        return dir;
-    }
 }
