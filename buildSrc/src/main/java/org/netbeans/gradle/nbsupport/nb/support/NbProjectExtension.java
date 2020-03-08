@@ -46,6 +46,7 @@ public final class NbProjectExtension {
     final Properties properties = new Properties();
     final Properties bundle = new Properties();
     final Manifest manifest;
+    final String implementationVersion;
     final boolean osgiMode;
 
     public NbProjectExtension(Project project) {
@@ -84,6 +85,7 @@ public final class NbProjectExtension {
             osgiMode = false;
         }
 
+        implementationVersion = mainAttributes.getValue("OpenIDE-Module-Implementation-Version");
         String localizingBundle = mainAttributes.getValue("OpenIDE-Module-Localizing-Bundle");
         if (localizingBundle != null) {
             try (InputStream is = new FileInputStream(new File(mainProjectDir, "src/" + localizingBundle))) {
@@ -128,6 +130,10 @@ public final class NbProjectExtension {
 
     public Manifest getManifest() {
         return manifest;
+    }
+
+    public String getImplementationVersion() {
+        return implementationVersion;
     }
 
     public String getCluster() {

@@ -165,14 +165,16 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         NbBuildExtension nbbuild = prj.getExtensions().getByType(NbBuildExtension.class);
         if (nbbuild.isGenerateCopyExternals()) {
             for (Map.Entry<String, String> ext : module.getClassPathExtensions().entrySet()) {
-                String taskName = "copyExt-" + ext.getKey().replace('/', '_');
-                Copy copy = prj.getTasks().create(taskName, Copy.class);
-                File srcFile = new File(prj.getProjectDir(), ext.getValue());
-                File destFile = new File(nbproject.getModuleDestDir(), ext.getKey());
-                copy.from(srcFile.getParentFile()).into(destFile.getParentFile());
-                copy.include(srcFile.getName());
-                copy.rename(srcFile.getName(), destFile.getName());
-                copyExt.dependsOn(copy);
+                if (ext.getValue() != null) {
+                    String taskName = "copyExt-" + ext.getKey().replace('/', '_');
+                    Copy copy = prj.getTasks().create(taskName, Copy.class);
+                    File srcFile = new File(prj.getProjectDir(), ext.getValue());
+                    File destFile = new File(nbproject.getModuleDestDir(), ext.getKey());
+                    copy.from(srcFile.getParentFile()).into(destFile.getParentFile());
+                    copy.include(srcFile.getName());
+                    copy.rename(srcFile.getName(), destFile.getName());
+                    copyExt.dependsOn(copy);
+                }
             }
         }
         prj.getTasks().getByName("compileJava").dependsOn(copyExt);
@@ -216,7 +218,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
 
             if (!nbproject.isOsgiMode()) {
                 attrs.put("OpenIDE-Module-Public-Packages", openideModulePublicPackages(module));
-                attrs.put("OpenIDE-Module-Module-Dependencies", openideModuleModuleDependencies(module.getDirectMainDependencies()));
+                attrs.put("OpenIDE-Module-Module-Dependencies", openideModuleModuleDependencies(prj, module.getDirectMainDependencies()));
                 attrs.put("OpenIDE-Module-Java-Dependencies", "Java > 1.8");
             }
 
@@ -224,7 +226,10 @@ public class NetBeansModulePlugin implements Plugin<Project> {
                     && "module".equals(nbproject.getProperty(MODULE_JAR_DIR));
             attrs.put("AutoUpdate-Show-In-Client", Boolean.toString(showInClient));
 
-            attrs.put("OpenIDE-Module-Implementation-Version", prj.getVersion());
+            if (nbproject.getImplementationVersion() == null) {
+                attrs.put("OpenIDE-Module-Implementation-Version", prj.getVersion());
+            }
+            
             String cp = classPathEntry(module);
             if (!cp.isEmpty()) {
                 attrs.put("Class-Path", cp);
@@ -268,17 +273,25 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         return sb.toString();
     }
 
-    private static String openideModuleModuleDependencies(Set<? extends NbModule.Dependency> deps) {
+    private static String openideModuleModuleDependencies(Project prj, Set<? extends NbModule.Dependency> deps) {
         if (deps.isEmpty()) return "-";
         StringBuilder sb = new StringBuilder();
         String separator = "";
         for (NbModule.Dependency dep : deps) {
             sb.append(separator);
             sb.append(dep.getCodeNameBase());
-            if (dep.getReleaseVersion() != null && dep.getReleaseVersion().isEmpty()) {
+            if (dep.getReleaseVersion() != null && !dep.getReleaseVersion().isEmpty()) {
                 sb.append('/').append(dep.getReleaseVersion());
             }
-            sb.append(" > ").append(dep.getSpecificationVersion());
+            if (dep.isImplementationVersion()) {
+                Project dprj = prj.project(":" + dep.getCodeNameBase());
+                if (dprj != null) {
+                    NbProjectExtension dext = dprj.getExtensions().getByType(NbProjectExtension.class);
+                    sb.append(" = ").append(dext.getImplementationVersion());
+                }
+            } else {
+                sb.append(" > ").append(dep.getSpecificationVersion());
+            }
             separator = ", ";
         }
         return sb.toString();
