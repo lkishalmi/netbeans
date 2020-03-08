@@ -16,7 +16,10 @@
 package org.netbeans.gradle.nbsupport.nb.support;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.gradle.api.JavaVersion;
@@ -31,6 +34,7 @@ import org.gradle.api.plugins.internal.JvmPluginsHelper;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
+import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.tasks.Jar;
@@ -46,13 +50,8 @@ public class NetBeansModulePlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
         project.getPluginManager().apply("java");
-        Clusters clusters = (Clusters) project.getRootProject().getExtensions().findByName("clusters");
 
-        NbBuildExtension nbbuild = new NbBuildExtension();
-        NbProjectExtension nbproject = new NbProjectExtension(project);
-        project.getExtensions().add("nbbuild", nbbuild);
-        project.getExtensions().add("nbproject", nbproject);
-
+        NbProjectExtension nbproject = project.getExtensions().getByType(NbProjectExtension.class);
         JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
         //java.setSourceCompatibility(JavaVersion.toVersion(nbproject.getProperty("javac.source")));
         java.setSourceCompatibility(JavaVersion.VERSION_1_8);
@@ -64,18 +63,30 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         String moduleName = project.getName();
         moduleName = nbproject.isTestOnly() ? moduleName.substring(0, moduleName.length() - 5) : moduleName;
         if (!"nbbuild".equals(moduleName)) {
-            NbModule module = clusters.modulesByName.get(moduleName);
-            Task copyExt = project.getTasks().create("copyExternals");
+            project.getTasks().register("copyExternals");
             project.afterEvaluate((Project prj) -> {
-                copyExternals(prj, nbproject, module);
+                copyExternals(prj);
                 if (!nbproject.isTestOnly()) {
-                    updateJarTask(project, nbproject, module);
+                    updateJarTask(prj);
                 }
-                updateTestTask(project, nbproject);
+                updateTestTask(prj);
             });
-            copyTestData(project, nbproject, module);
-            prepareDependencies(project, nbproject, module);
+            prepareDependencies(project);
+            addNbDependenciesTask(project);
+            copyTestData(project);
         }
+    }
+
+    private void addNbDependenciesTask(Project prj) {
+        prj.getTasks().register("nbDependencies", (Task task) -> {
+           task.doLast((t) -> {
+               try {
+                   NbProjectExtension nbproject = prj.getExtensions().getByType(NbProjectExtension.class);
+                   nbproject.getModule().inspectDependencies(System.out);
+               } catch (IOException ex) {
+               }
+           });
+        });
     }
 
     private void prepareSourceSets(Project prj) {
@@ -103,19 +114,21 @@ public class NetBeansModulePlugin implements Plugin<Project> {
 
         SourceSetContainer ss = prj.getExtensions().getByType(SourceSetContainer.class);
         SourceSet test = ss.getByName("test");
-        Jar jar = prj.getTasks().create("jarTest", Jar.class);
-        jar.getDestinationDirectory().set(new File(nbprj.getTestDestBaseDir("unit"), prj.getName().replace('.', '-')));
-        jar.getArchiveFileName().set("tests.jar");
-        jar.dependsOn("testClasses");
-        jar.from(test.getOutput());
-        jar.getArchiveClassifier().set("test");
-
-        prj.getArtifacts().add("testApi", jar);
+        TaskProvider<Jar> pvd = prj.getTasks().register("jarTest", Jar.class, (Jar jar) -> {
+            jar.getDestinationDirectory().set(new File(nbprj.getTestDestBaseDir("unit"), prj.getName().replace('.', '-')));
+            jar.getArchiveFileName().set("tests.jar");
+            jar.dependsOn("testClasses");
+            jar.from(test.getOutput());
+            jar.getArchiveClassifier().set("test");
+        });
+        prj.getArtifacts().add("testApi", pvd);
     }
 
-    private void prepareDependencies(Project prj, NbProjectExtension nbProject, NbModule module) {
+    private void prepareDependencies(Project prj) {
         DependencyHandler dh = prj.getDependencies();
         NbBuildExtension nbbuild = prj.getExtensions().getByType(NbBuildExtension.class);
+        NbProjectExtension nbProject = prj.getExtensions().getByType(NbProjectExtension.class);
+        NbModule module = nbProject.getModule();
 
         for (String ext : module.getClassPathExtensions().keySet()) {
             dh.add("api", prj.files(new File(nbProject.getModuleDestDir(), ext)));
@@ -160,36 +173,46 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         }
     }
 
-    private void copyExternals(Project prj, NbProjectExtension nbproject, NbModule module) {
-        Task copyExt = prj.getTasks().findByName("copyExternals");
+    private void copyExternals(Project prj) {
         NbBuildExtension nbbuild = prj.getExtensions().getByType(NbBuildExtension.class);
+        NbProjectExtension nbproject = prj.getExtensions().getByType(NbProjectExtension.class);
+        List<TaskProvider> externals = new LinkedList<>();
         if (nbbuild.isGenerateCopyExternals()) {
-            for (Map.Entry<String, String> ext : module.getClassPathExtensions().entrySet()) {
+            for (Map.Entry<String, String> ext : nbproject.getModule().getClassPathExtensions().entrySet()) {
                 if (ext.getValue() != null) {
                     String taskName = "copyExt-" + ext.getKey().replace('/', '_');
-                    Copy copy = prj.getTasks().create(taskName, Copy.class);
-                    File srcFile = new File(prj.getProjectDir(), ext.getValue());
-                    File destFile = new File(nbproject.getModuleDestDir(), ext.getKey());
-                    copy.from(srcFile.getParentFile()).into(destFile.getParentFile());
-                    copy.include(srcFile.getName());
-                    copy.rename(srcFile.getName(), destFile.getName());
-                    copyExt.dependsOn(copy);
+                    externals.add(prj.getTasks().register(taskName, Copy.class, (Copy copy) -> {
+                        File srcFile = new File(prj.getProjectDir(), ext.getValue());
+                        File destFile = new File(nbproject.getModuleDestDir(), ext.getKey());
+                        copy.from(srcFile.getParentFile()).into(destFile.getParentFile());
+                        copy.include(srcFile.getName());
+                        copy.rename(srcFile.getName(), destFile.getName());
+                    }));
                 }
             }
         }
-        prj.getTasks().getByName("compileJava").dependsOn(copyExt);
-        prj.getTasks().getByName("build").dependsOn(copyExt);
+        TaskProvider copyExt = prj.getTasks().named("copyExternals",(Task copy) -> {
+            for (TaskProvider ext : externals) {
+                copy.dependsOn(ext);
+            }
+        });
+        prj.getTasks().named("compileJava").configure((Task task) -> task.dependsOn(copyExt));
     }
 
-    private void copyTestData(Project prj, NbProjectExtension nbproject, NbModule module) {
-        Copy copy = prj.getTasks().create("copyTestData", Copy.class);
-        copy.from(prj.file("test/unit/data")).into(new File(prj.getBuildDir(), "test/unit/data"));
-        prj.getTasks().findByName("test").dependsOn(copy);
+    private void copyTestData(Project prj) {
+        TaskProvider pvd = prj.getTasks().register("copyTestData", Copy.class, (Copy copy) -> {
+            copy.from(prj.file("test/unit/data")).into(new File(prj.getBuildDir(), "test/unit/data"));
+        });
+        
+        prj.getTasks().named("test").configure((Task task) -> task.dependsOn(pvd));
     }
 
-    private void updateJarTask(Project prj, NbProjectExtension nbproject, NbModule module) {
-        Jar jar = (Jar) prj.getTasks().findByName("jar");
-        if (jar != null) {
+    private void updateJarTask(final Project prj) {
+        TaskProvider pvd = prj.getTasks().named("jar");
+        if (pvd == null) return;
+        pvd.configure((task) -> {
+            NbProjectExtension nbproject = prj.getExtensions().getByType(NbProjectExtension.class);
+            Jar jar = (Jar) task;
             jar.getDestinationDirectory().set(nbproject.getModuleDestDir());
             String jarName = nbproject.getProperty(MODULE_JAR_NAME);
             jarName = jarName != null ? jarName : prj.getName().replace('.', '-') + ".jar";
@@ -202,7 +225,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             Attributes attrs = jar.getManifest().getAttributes();
             if (nbproject.isOsgiMode()) {
                 attrs.put("Bundle-ManifestVersion", "2");
-                prj.getLogger().info("OSGI Support is weak for: " + module.getCodeNameBase(), module);
+                prj.getLogger().info("OSGI Support is weak for: " + prj.getName());
             } else if (!"lib".equals(nbproject.getProperty(MODULE_JAR_DIR))) {
                 String key = "OpenIDE-Module-Requires";
                 String token = "org.openide.modules.ModuleFormat1";
@@ -217,8 +240,8 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             }
 
             if (!nbproject.isOsgiMode()) {
-                attrs.put("OpenIDE-Module-Public-Packages", openideModulePublicPackages(module));
-                attrs.put("OpenIDE-Module-Module-Dependencies", openideModuleModuleDependencies(prj, module.getDirectMainDependencies()));
+                attrs.put("OpenIDE-Module-Public-Packages", openideModulePublicPackages(nbproject.getModule()));
+                attrs.put("OpenIDE-Module-Module-Dependencies", openideModuleModuleDependencies(prj, nbproject.getModule().getDirectMainDependencies()));
                 attrs.put("OpenIDE-Module-Java-Dependencies", "Java > 1.8");
             }
 
@@ -227,38 +250,46 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             attrs.put("AutoUpdate-Show-In-Client", Boolean.toString(showInClient));
 
             if (nbproject.getImplementationVersion() == null) {
-                attrs.put("OpenIDE-Module-Implementation-Version", prj.getVersion());
+                attrs.put("OpenIDE-Module-Implementation-Version", jar.getProject().getVersion());
             }
-            
-            String cp = classPathEntry(module);
+
+            String cp = classPathEntry(nbproject.getModule());
             if (!cp.isEmpty()) {
                 attrs.put("Class-Path", cp);
             }
-        }
-        jar.setEnabled(prj.file("src").isDirectory());
+            jar.setEnabled(jar.getProject().file("src").isDirectory());
+        });
     }
 
     private void updateCompileTasks(Project prj) {
-        JavaCompile compile = (JavaCompile) prj.getTasks().findByName("compileJava");
-        compile.getOptions().setSourcepath(prj.files("src"));
-        compile = (JavaCompile) prj.getTasks().findByName("compileTestJava");
-        compile.getOptions().setSourcepath(prj.files("test/unit/src"));
+        prj.getTasks().named("compileJava").configure((Task task) -> {
+            JavaCompile compile = (JavaCompile) task;
+            compile.getOptions().setSourcepath(task.getProject().files("src"));
+        });
+        prj.getTasks().named("compileTestJava").configure((Task task) -> {
+            JavaCompile compile = (JavaCompile) task;
+            compile.getOptions().setSourcepath(task.getProject().files("test/unit/src"));
+        });
     }
 
-    private void updateTestTask(Project prj, NbProjectExtension nbproject) {
-        Test test = (Test) prj.getTasks().findByName("test");
-        String[] includes = nbproject.getProperty(TEST_INCLUDES).split(",");
-        test.include(includes);
-        if (nbproject.getProperty(TEST_EXCLUDES) != null) {
-            String[] excludes = nbproject.getProperty(TEST_EXCLUDES).split(",");
-            test.exclude(excludes);
-        }
-        for (Map.Entry<String, String> prop : nbproject.getTestProperties("unit").entrySet()) {
-            test.systemProperty(prop.getKey(), prop.getValue());
-        }
-        test.systemProperty("xtest.data", new File(prj.getBuildDir(), "test/unit/data").getAbsolutePath());
-        test.systemProperty("nbjunit.workdir", new File(prj.getBuildDir(), "test/unit/work").getAbsolutePath());
-        test.systemProperty("nbjunit.hard.timeout", "600000");
+    private void updateTestTask(Project prj) {
+        prj.getTasks().named("test").configure((task) -> {
+            NbProjectExtension nbproject = prj.getExtensions().getByType(NbProjectExtension.class);
+            Test test = (Test) task;
+            String[] includes = nbproject.getProperty(TEST_INCLUDES).split(",");
+            test.include(includes);
+            if (nbproject.getProperty(TEST_EXCLUDES) != null) {
+                String[] excludes = nbproject.getProperty(TEST_EXCLUDES).split(",");
+                test.exclude(excludes);
+            }
+            for (Map.Entry<String, String> prop : nbproject.getTestProperties("unit").entrySet()) {
+                test.systemProperty(prop.getKey(), prop.getValue());
+            }
+            test.systemProperty("xtest.data", new File(prj.getBuildDir(), "test/unit/data").getAbsolutePath());
+            test.systemProperty("nbjunit.workdir", new File(prj.getBuildDir(), "test/unit/work").getAbsolutePath());
+            test.systemProperty("nbjunit.hard.timeout", "600000");
+
+        });
     }
 
     private static String openideModulePublicPackages(NbModule module) {

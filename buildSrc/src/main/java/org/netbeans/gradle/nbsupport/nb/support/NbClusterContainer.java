@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 lkishalmi.
+ * Copyright 2020 lkishalmi.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,13 @@
 package org.netbeans.gradle.nbsupport.nb.support;
 
 import java.io.File;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import org.gradle.api.NamedDomainObjectCollection;
 
 /**
  *
  * @author lkishalmi
  */
-public class NbCluster extends DependencyItem<NbCluster>{
-    
-    final Set<String> modules = new LinkedHashSet<>();
-    final File dir;
+public interface NbClusterContainer extends NamedDomainObjectCollection<NbCluster> {
 
-    public NbCluster(String name, File dir) {
-        super(name);
-        this.dir = dir;
-    }
-
-    public void project(String project) {
-        modules.add(project);
-    }
-
-    public File getDir() {
-        return dir;
-    }
+    void from(File nbclusters);
 }

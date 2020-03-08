@@ -15,6 +15,8 @@
  */
 package org.netbeans.gradle.nbsupport.nb.support;
 
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -22,6 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.gradle.api.Project;
 
 /**
  *
@@ -38,12 +41,11 @@ public final class NbModule {
     List<String> friendModules;
     Set<Dependency> directMainDependencies;
     Map<String, Set<Dependency>> directTestDependencies = new HashMap<>();
-
     Map<DependencyType, Set<Dependency>> depCache = new EnumMap(DependencyType.class);
-    final NbCluster cluster;
+    final Project project;
 
-    NbModule(NbCluster cluster) {
-        this.cluster = cluster;
+    NbModule(Project project) {
+        this.project = project;
     }
 
     public String getCodeNameBase() {
@@ -61,7 +63,7 @@ public final class NbModule {
     Set<Dependency> getDependencies(DependencyType type) {
         Set<Dependency> ret = depCache.get(type);
         if (ret == null) {
-            ret = new LinkedHashSet<Dependency>();
+            ret = new LinkedHashSet<>();
             Set<? extends Dependency> directDeps;
             switch (type) {
                 case TEST_UNIT:
@@ -73,7 +75,8 @@ public final class NbModule {
             for (Dependency dep: directDeps) {
                 ret.add(dep);
                 if (!dep.getCodeNameBase().equals(getCodeNameBase()) && dep.isRecursive()) {
-                    NbModule m = cluster.findInClusters(dep.getCodeNameBase());
+
+                    NbModule m = findOrLoadModule(dep.getCodeNameBase());
                     if (m != null) {
                         Set<Dependency> mdeps = m.getDependencies(dep.isTest() ? DependencyType.TEST_UNIT : DependencyType.MAIN);
                         ret.addAll(mdeps);
@@ -88,6 +91,18 @@ public final class NbModule {
         return ret;
     }
 
+    NbModule findOrLoadModule(String codeNameBase) {
+        Project prj = project.findProject(":" + codeNameBase);
+        if (prj != null) {
+            NbProjectExtension ext = prj.getExtensions().findByType(NbProjectExtension.class);
+            if (ext == null) {
+                System.out.println("No extension for" + prj.getName());
+            }
+            return ext.getModule();
+        }
+        throw new IllegalArgumentException("No project dependency ':" + codeNameBase + "' found for :" + project.getName());
+    }
+
     Set<? extends Dependency> getDirectMainDependencies() {
         return directMainDependencies != null ? directMainDependencies : Collections.emptySet();
     }
@@ -95,6 +110,49 @@ public final class NbModule {
     Set<? extends Dependency> getDirectTestDependencies(String testType) {
         Set<Dependency> deps = directTestDependencies.get(testType);
         return deps != null ? deps : Collections.emptySet();
+    }
+
+    public void inspectDependencies(PrintStream out) throws IOException {
+        for (DependencyType type : DependencyType.values()) {
+            inspectDependencies(0, type, out);
+            out.println();
+        }
+    }
+
+    public void inspectDependencies(int level, DependencyType type, PrintStream out) throws IOException {
+        Set<? extends Dependency> directDeps;
+        switch (type) {
+            case TEST_UNIT:
+                directDeps = getDirectTestDependencies("unit");
+                break;
+            default:
+                directDeps = getDirectMainDependencies();
+        }
+        if (level == 0) {
+            out.println(codeNameBase + " " + type + " dependencies:");
+        }
+        for (Dependency dep: directDeps) {
+            for (int i = 0; i < level + 1; i++) {
+                out.print("  ");
+            }
+            out.print("- " + dep.getCodeNameBase());
+            if (dep.getReleaseVersion() != null) out.print("/" + dep.getReleaseVersion());
+            if (dep.isImplementationVersion() || dep.getSpecificationVersion() != null) {
+                out.print(dep.isImplementationVersion() ? " = " : " > ");
+                out.print(dep.isImplementationVersion() ? "<impl>" : dep.getSpecificationVersion());
+            }
+            if (dep.isTest()) out.print(" (t)");
+            if (dep.isRecursive()) out.print(" (r)");
+            out.println();
+            if (dep.isRecursive()) {
+                NbModule m = findOrLoadModule(dep.getCodeNameBase());
+                if (m != null) {
+                    m.inspectDependencies(level + 1, dep.isTest() ? DependencyType.TEST_UNIT : DependencyType.MAIN, out);
+                } else {
+                    throw new IllegalStateException("No module '" + dep.getCodeNameBase() + "' as a depencency of: " + getCodeNameBase());
+                }
+            }
+        }
     }
 
     public static final class Dependency {
