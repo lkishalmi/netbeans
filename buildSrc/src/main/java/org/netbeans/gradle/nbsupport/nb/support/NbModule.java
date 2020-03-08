@@ -17,6 +17,7 @@ package org.netbeans.gradle.nbsupport.nb.support;
 
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -26,9 +27,17 @@ import java.util.Set;
  *
  * @author lkishalmi
  */
-public abstract class NbModule {
+public final class NbModule {
 
     public enum DependencyType { MAIN, TEST_UNIT }
+
+    String codeNameBase;
+    Map<String, String> classPathExtensions;
+    List<String> publicPackages;
+    List<String> friendPackages;
+    List<String> friendModules;
+    Set<Dependency> directMainDependencies;
+    Map<String, Set<Dependency>> directTestDependencies = new HashMap<>();
 
     Map<DependencyType, Set<Dependency>> depCache = new EnumMap(DependencyType.class);
     final NbCluster cluster;
@@ -37,10 +46,17 @@ public abstract class NbModule {
         this.cluster = cluster;
     }
 
-    public abstract String getCodeNameBase();
+    public String getCodeNameBase() {
+        return codeNameBase;
+    }
 
-    abstract Map<String, String> getClassPathExtensions();
-    abstract List<String> getPublicPackages();
+    public Map<String, String> getClassPathExtensions() {
+        return classPathExtensions != null ? classPathExtensions : Collections.emptyMap();
+    }
+
+    public List<String> getPublicPackages() {
+        return publicPackages != null ? publicPackages : Collections.emptyList();
+    }
 
     Set<Dependency> getDependencies(DependencyType type) {
         Set<Dependency> ret = depCache.get(type);
@@ -72,16 +88,56 @@ public abstract class NbModule {
         return ret;
     }
 
-    abstract Set<? extends Dependency> getDirectMainDependencies();
-    abstract Set<? extends Dependency> getDirectTestDependencies(String testType);
-
-    interface Dependency {
-        String getCodeNameBase();
-        boolean isBuildPrerequisite();
-        boolean isCompileDependency();
-        boolean isTest();
-        boolean isRecursive();
-        String getReleaseVersion();
-        String getSpecificationVersion();
+    Set<? extends Dependency> getDirectMainDependencies() {
+        return directMainDependencies != null ? directMainDependencies : Collections.emptySet();
     }
+
+    Set<? extends Dependency> getDirectTestDependencies(String testType) {
+        Set<Dependency> deps = directTestDependencies.get(testType);
+        return deps != null ? deps : Collections.emptySet();
+    }
+
+    public static final class Dependency {
+        String codeNameBase;
+        boolean buildRequisite;
+        boolean compileDependency;
+        boolean recursive;
+        boolean test;
+        boolean implementationVersion;
+        String releaseVersion;
+        String specificationVersion;
+
+        public String getCodeNameBase() {
+            return codeNameBase;
+        }
+
+        public boolean isBuildPrerequisite() {
+            return buildRequisite;
+        }
+
+        public boolean isCompileDependency() {
+            return compileDependency;
+        }
+
+        public boolean isTest() {
+            return test;
+        }
+
+        public boolean isRecursive() {
+            return recursive;
+        }
+
+        public boolean isImplementationVersion() {
+            return implementationVersion;
+        }
+
+        public String getReleaseVersion() {
+            return releaseVersion;
+        }
+
+        public String getSpecificationVersion() {
+            return specificationVersion;
+        }
+    }
+    
 }
