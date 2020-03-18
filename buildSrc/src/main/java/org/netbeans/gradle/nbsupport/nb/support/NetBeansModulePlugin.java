@@ -28,6 +28,7 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.CopySpec;
+import org.gradle.api.file.DuplicatesStrategy;
 import org.gradle.api.java.archives.Attributes;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.plugins.internal.JvmPluginsHelper;
@@ -115,6 +116,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         SourceSetContainer ss = prj.getExtensions().getByType(SourceSetContainer.class);
         SourceSet test = ss.getByName("test");
         TaskProvider<Jar> pvd = prj.getTasks().register("jarTest", Jar.class, (Jar jar) -> {
+            jar.setDuplicatesStrategy(DuplicatesStrategy.EXCLUDE);
             jar.getDestinationDirectory().set(new File(nbprj.getTestDestBaseDir("unit"), prj.getName().replace('.', '-')));
             jar.getArchiveFileName().set("tests.jar");
             jar.dependsOn("testClasses");
@@ -213,6 +215,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         pvd.configure((task) -> {
             NbProjectExtension nbproject = prj.getExtensions().getByType(NbProjectExtension.class);
             Jar jar = (Jar) task;
+            jar.setDuplicatesStrategy(DuplicatesStrategy.EXCLUDE);
             jar.getDestinationDirectory().set(nbproject.getModuleDestDir());
             String jarName = nbproject.getProperty(MODULE_JAR_NAME);
             jarName = jarName != null ? jarName : prj.getName().replace('.', '-') + ".jar";
@@ -241,7 +244,10 @@ public class NetBeansModulePlugin implements Plugin<Project> {
 
             if (!nbproject.isOsgiMode()) {
                 attrs.put("OpenIDE-Module-Public-Packages", openideModulePublicPackages(nbproject.getModule()));
-                attrs.put("OpenIDE-Module-Module-Dependencies", openideModuleModuleDependencies(prj, nbproject.getModule().getDirectMainDependencies()));
+                String moduleDeps = openideModuleModuleDependencies(prj, nbproject.getModule().getDirectMainDependencies());
+                if (!moduleDeps.isEmpty()) {
+                    attrs.put("OpenIDE-Module-Module-Dependencies", moduleDeps);
+                }
                 attrs.put("OpenIDE-Module-Java-Dependencies", "Java > 1.8");
             }
 
@@ -288,6 +294,8 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             test.systemProperty("xtest.data", new File(prj.getBuildDir(), "test/unit/data").getAbsolutePath());
             test.systemProperty("nbjunit.workdir", new File(prj.getBuildDir(), "test/unit/work").getAbsolutePath());
             test.systemProperty("nbjunit.hard.timeout", "600000");
+            test.systemProperty("cluster", nbproject.getCluster());
+            test.systemProperty("platform.dir", new File(prj.getRootDir(), "build/netbeans/platform").getAbsolutePath());
 
         });
     }
@@ -298,32 +306,33 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         String separator = "";
         for (String pkg : module.getPublicPackages()) {
             sb.append(separator);
-            sb.append(pkg).append(".*");
+            sb.append(pkg);
             separator = ", ";
         }
         return sb.toString();
     }
 
     private static String openideModuleModuleDependencies(Project prj, Set<? extends NbModule.Dependency> deps) {
-        if (deps.isEmpty()) return "-";
         StringBuilder sb = new StringBuilder();
         String separator = "";
         for (NbModule.Dependency dep : deps) {
-            sb.append(separator);
-            sb.append(dep.getCodeNameBase());
-            if (dep.getReleaseVersion() != null && !dep.getReleaseVersion().isEmpty()) {
-                sb.append('/').append(dep.getReleaseVersion());
-            }
-            if (dep.isImplementationVersion()) {
-                Project dprj = prj.project(":" + dep.getCodeNameBase());
-                if (dprj != null) {
-                    NbProjectExtension dext = dprj.getExtensions().getByType(NbProjectExtension.class);
-                    sb.append(" = ").append(dext.getImplementationVersion());
+            if (dep.isRuntime()) {
+                sb.append(separator);
+                sb.append(dep.getCodeNameBase());
+                if (dep.getReleaseVersion() != null && !dep.getReleaseVersion().isEmpty()) {
+                    sb.append('/').append(dep.getReleaseVersion());
                 }
-            } else {
-                sb.append(" > ").append(dep.getSpecificationVersion());
+                if (dep.isImplementationVersion()) {
+                    Project dprj = prj.project(":" + dep.getCodeNameBase());
+                    if (dprj != null) {
+                        NbProjectExtension dext = dprj.getExtensions().getByType(NbProjectExtension.class);
+                        sb.append(" = ").append(dext.getImplementationVersion());
+                    }
+                } else if (dep.getSpecificationVersion() != null) {
+                    sb.append(" > ").append(dep.getSpecificationVersion());
+                }
+                separator = ", ";
             }
-            separator = ", ";
         }
         return sb.toString();
     }

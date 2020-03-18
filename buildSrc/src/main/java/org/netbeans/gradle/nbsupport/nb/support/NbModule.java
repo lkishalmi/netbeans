@@ -158,6 +158,7 @@ public final class NbModule {
     public static final class Dependency {
         String codeNameBase;
         boolean buildRequisite;
+        boolean runtime;
         boolean compileDependency;
         boolean recursive;
         boolean test;
@@ -189,6 +190,9 @@ public final class NbModule {
             return implementationVersion;
         }
 
+        public boolean isRuntime() {
+            return runtime;
+        }
         public String getReleaseVersion() {
             return releaseVersion;
         }

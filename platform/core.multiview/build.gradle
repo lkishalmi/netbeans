@@ -1,5 +1,1 @@
-test {
-    // TODO: Gradle TestRunner Crashes on this one
-    exclude '**/NoMVCLookupTest.class'
-    forkEvery = 1
-}
+test.forkEvery = 1
