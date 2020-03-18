@@ -258,7 +258,10 @@ public final class NbProjectExtension {
                             if (nevt.isStartElement()) {
                                 String ntag = nevt.asStartElement().getName().getLocalPart();
                                 if ("package".equals(ntag)) {
-                                    publicPackages.add(events.getElementText());
+                                    publicPackages.add(events.getElementText() + ".*");
+                                }
+                                if ("subpackages".equals(ntag)) {
+                                    publicPackages.add(events.getElementText() + ".**");
                                 }
                             }
                             if (nevt.isEndElement() && nevt.asEndElement().getName().equals(element.getName())) break;
@@ -335,6 +338,9 @@ public final class NbProjectExtension {
                             break;
                         case "compile-dependency":
                             dep.compileDependency = true;
+                            break;
+                        case "run-dependency":
+                            dep.runtime = true;
                             break;
                         case "recursive":
                             dep.recursive = true;

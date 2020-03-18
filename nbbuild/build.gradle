@@ -1,4 +1,4 @@
-apply plugin: 'java'
+apply plugin: 'java-library'
 
 sourceCompatibility = '1.8'
 sourceSets {
@@ -7,16 +7,18 @@ sourceSets {
         resources.srcDirs = []
     }
     test {
-        java.srcDirs = ['test/unit']
+        java.srcDirs = []
         resources.srcDirs = []
     }
 }
 repositories {
-    jcenter()
+    mavenCentral()
 }
 dependencies {
-    implementation 'org.apache.ant:ant:1.10.+'
+    api 'org.apache.ant:ant:1.10.+'
     implementation 'javax.help:javahelp:2.0.05'
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
     
-    testImplementation 'junit:junit:4.12'
+//    testImplementation 'junit:junit:4.12'
+//    testImplementation project(':org.netbeans.modules.nbjunit')
 }
