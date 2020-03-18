@@ -1,6 +1,13 @@
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     compileOnly files(\
         "$rootDir/platform/libs.osgi/external/osgi.core-7.0.0.jar",
         "$rootDir/platform/libs.osgi/external/osgi.cmpn-5.0.0.jar")
 
+    testImplementation project(':nbbuild')
 }
+
+test.forkEvery = 1
