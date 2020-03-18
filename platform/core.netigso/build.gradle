@@ -1,3 +1,5 @@
 test {
     forkEvery = 1
+    ignoreFailures = true
+    testLogging.showStandardStreams = true
 }
