@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -29,6 +30,7 @@ import org.gradle.api.internal.AbstractValidatingNamedDomainObjectContainer;
 import org.gradle.api.internal.CollectionCallbackActionDecorator;
 import org.gradle.api.reflect.TypeOf;
 import org.gradle.api.Project;
+import org.gradle.api.file.FileCollection;
 import org.gradle.internal.reflect.Instantiator;
 
 /**
@@ -61,6 +63,7 @@ public class DefaultNbClusterContainer extends AbstractValidatingNamedDomainObje
     public TypeOf<?> getPublicType() {
         return TypeOf.typeOf(NbClusterContainer.class);
     }
+
 
     @Override
     public void from(File nbclusters) {
@@ -134,6 +137,15 @@ public class DefaultNbClusterContainer extends AbstractValidatingNamedDomainObje
                 }
             }
         }
+    }
+
+    @Override
+    public FileCollection getFinalDirs() {
+        ArrayList<String> relPaths = new ArrayList<>();
+        for (NbCluster cluster : this) {
+            relPaths.add("build/netbeans/" + cluster.getName());
+        }
+        return project.files((Object[]) relPaths.toArray(new String[relPaths.size()]));
     }
 
 }

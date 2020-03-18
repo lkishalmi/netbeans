@@ -281,6 +281,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
     private void updateTestTask(Project prj) {
         prj.getTasks().named("test").configure((task) -> {
             NbProjectExtension nbproject = prj.getExtensions().getByType(NbProjectExtension.class);
+            NbClusterContainer clusters = prj.getRootProject().getExtensions().getByType(NbClusterContainer.class);
             Test test = (Test) task;
             String[] includes = nbproject.getProperty(TEST_INCLUDES).split(",");
             test.include(includes);
@@ -295,6 +296,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             test.systemProperty("nbjunit.workdir", new File(prj.getBuildDir(), "test/unit/work").getAbsolutePath());
             test.systemProperty("nbjunit.hard.timeout", "600000");
             test.systemProperty("cluster", nbproject.getCluster());
+            test.systemProperty("cluster.path.final", clusters.getFinalDirs().getAsPath());
             test.systemProperty("platform.dir", new File(prj.getRootDir(), "build/netbeans/platform").getAbsolutePath());
 
         });
