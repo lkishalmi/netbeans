@@ -25,9 +25,10 @@ def excludedModules = [
     'org.openide.util.enumerations'
 ]
 
-def clusterDirs = [\
-    'apisupport', \
-    'enterprise', \
+def clusterDirs = [
+    'apisupport', 
+    'cpplite',
+    'enterprise', 
     'ergonomics',
     'extide',
     'groovy',

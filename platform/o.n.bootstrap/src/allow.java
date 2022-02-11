@@ -42,7 +42,6 @@ public class allow extends SecurityManager {
         uninstall();
     }
 
-    @Override
     public void checkAwtEventQueueAccess() {
         uninstall();
     }
@@ -87,7 +86,6 @@ public class allow extends SecurityManager {
         uninstall();
     }
 
-    @Override
     public void checkMemberAccess(Class<?> clazz, int which) {
         uninstall();
     }
@@ -162,12 +160,10 @@ public class allow extends SecurityManager {
         uninstall();
     }
 
-    @Override
     public void checkSystemClipboardAccess() {
         uninstall();
     }
 
-    @Override
     public boolean checkTopLevelWindow(Object window) {
         uninstall();
         return true;

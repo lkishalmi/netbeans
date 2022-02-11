@@ -31,6 +31,12 @@ def clusters = [
         'org.netbeans.modules.apisupport.refactoring': 'apisupport.refactoring',
         'org.netbeans.modules.timers': 'timers',
     ],
+    'cpplite': [
+        'org.netbeans.modules.cpplite.kit': 'cpplite.kit',
+        'org.netbeans.modules.cpplite.project': 'cpplite.project',
+        'org.netbeans.modules.cpplite.debugger': 'cpplite.debugger',
+        'org.netbeans.modules.cpplite.editor': 'cpplite.editor',
+    ],
     'enterprise': [
         'org.netbeans.modules.j2ee.genericserver': 'j2ee.genericserver',
         'org.netbeans.modules.j2ee.ejbjarproject': 'j2ee.ejbjarproject',
