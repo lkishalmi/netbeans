@@ -168,6 +168,9 @@ public class NetBeansModulePlugin implements Plugin<Project> {
                 dh.add("testImplementation", dh.project(pdep));
             }
             Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
+            if ( dprj == null ) {
+                System.out.println("No dependency for " + dependency.getCodeNameBase() + " in " + prj.getName());
+            }
             dh.add("testImplementation", dprj);
             if (nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
                 dh.add("testAnnotationProcessor", dprj);

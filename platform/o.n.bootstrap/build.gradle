@@ -5,7 +5,7 @@ task copyUnixLauncher(type: Copy) {
 }
 
 task copyWindowsLauncher(type: Copy) {
-    from zipTree('external/platform-launchers-10.0.zip')
+    from zipTree('external/launcher-12.5-distribution.zip')
     into nbproject.moduleDestDir
 }
 
