@@ -136,7 +136,7 @@
     <property name="xmlrelease" value="${nb_all}/nbbuild/build/netbeansrelease.xml"/>
     <property name="propertiesrelease" value="${nb_all}/nbbuild/build/netbeansrelease.properties"/>
     <property file="${nb_all}/nbbuild/build/gitinfo.properties"/>
-    <releasejson file="${releasejson}" xmloutput="${xmlrelease}" propertiesoutput="${propertiesrelease}" branch="${metabuild.branch}" hash="${metabuild.hash}"/>
+    <!--releasejson file="${releasejson}" xmloutput="${xmlrelease}" propertiesoutput="${propertiesrelease}" branch="${metabuild.branch}" hash="${metabuild.hash}"/-->
     <property file="${nb_all}/nbbuild/build/netbeansrelease.properties"/>
     <!-- javadoc content filtering -->
     <setjavadoc branch="${metabuild.branch}"/>
