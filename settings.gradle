@@ -892,9 +892,10 @@ def clusters = [
 ]
 
 clusters.each { cluster, modules ->
+    File clusterDir = new File(rootDir, cluster)
     modules.each { name, dir ->
-        def pname = ':' + name
+        def pname = ":${cluster}:${name}"
         include pname
-        project(pname).projectDir = new File(rootDir, "${cluster}/${dir}")
+        project(pname).projectDir = new File(clusterDir, dir)
     }
 }

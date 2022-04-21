@@ -17,6 +17,7 @@ package org.netbeans.gradle.nbsupport.nb.support;
 
 import java.io.File;
 import org.gradle.api.NamedDomainObjectCollection;
+import org.gradle.api.Project;
 import org.gradle.api.file.FileCollection;
 
 /**
@@ -27,4 +28,5 @@ public interface NbClusterContainer extends NamedDomainObjectCollection<NbCluste
 
     void from(File nbclusters);
     FileCollection getFinalDirs();
+    Project getProjectByCodeName(String codeNameBase);
 }

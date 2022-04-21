@@ -39,6 +39,7 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.tasks.Jar;
+import org.gradle.tooling.BuildException;
 
 import static org.netbeans.gradle.nbsupport.nb.support.NbProjectExtension.*;
 
@@ -50,21 +51,34 @@ public class NetBeansModulePlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
+        
         project.getPluginManager().apply("java");
 
-        NbProjectExtension nbproject = project.getExtensions().getByType(NbProjectExtension.class);
         JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
         //java.setSourceCompatibility(JavaVersion.toVersion(nbproject.getProperty("javac.source")));
         java.setSourceCompatibility(JavaVersion.VERSION_1_8);
-        prepareTestConfiguration(project, nbproject);
+
+        NbBuildExtension nbbuild = new NbBuildExtension();
+        NbProjectExtension nbproject = new NbProjectExtension(project);
+        project.getExtensions().add("nbbuild", nbbuild);
+        project.getExtensions().add("nbproject", nbproject);
+
         project.setDescription(nbproject.getDisplayName());
+
+        prepareTestConfiguration(project, nbproject);
+
         prepareSourceSets(project);
         updateCompileTasks(project);
+
+        project.getTasks().register("copyExternals");
+        addNbDependenciesTask(project);
+
+        project.afterEvaluate((Project prj) -> afterEvaluate(prj));
         
-        String moduleName = project.getName();
+        /*
+        String moduleName = nbproject.module.getCodeNameBase();
         moduleName = nbproject.isTestOnly() ? moduleName.substring(0, moduleName.length() - 5) : moduleName;
         if (!"nbbuild".equals(moduleName)) {
-            project.getTasks().register("copyExternals");
             project.afterEvaluate((Project prj) -> {
                 copyExternals(prj);
                 if (!nbproject.isTestOnly()) {
@@ -75,9 +89,20 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             prepareDependencies(project);
             addNbDependenciesTask(project);
             copyTestData(project);
-        }
+        }*/
     }
 
+    private void afterEvaluate(Project project) {
+        NbProjectExtension nbproject = project.getExtensions().getByType(NbProjectExtension.class);        
+        
+            copyExternals(project);
+            if (!nbproject.isTestOnly()) {
+                updateJarTask(project);
+            }
+            updateTestTask(project);
+        
+    }
+    
     private void addNbDependenciesTask(Project prj) {
         prj.getTasks().register("nbDependencies", (Task task) -> {
            task.doLast((t) -> {
@@ -131,6 +156,9 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         NbBuildExtension nbbuild = prj.getExtensions().getByType(NbBuildExtension.class);
         NbProjectExtension nbProject = prj.getExtensions().getByType(NbProjectExtension.class);
         NbModule module = nbProject.getModule();
+        if (module == null) {
+            throw new BuildException("" + prj + " does not have module", new NullPointerException());
+        }
 
         for (String ext : module.getClassPathExtensions().keySet()) {
             dh.add("api", prj.files(new File(nbProject.getModuleDestDir(), ext)));
@@ -328,7 +356,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
                     sb.append('/').append(dep.getReleaseVersion());
                 }
                 if (dep.isImplementationVersion()) {
-                    Project dprj = prj.project(":" + dep.getCodeNameBase());
+                    Project dprj = getProjectbyCodeNameBase(prj, dep.getCodeNameBase());
                     if (dprj != null) {
                         NbProjectExtension dext = dprj.getExtensions().getByType(NbProjectExtension.class);
                         sb.append(" = ").append(dext.getImplementationVersion());
@@ -340,6 +368,11 @@ public class NetBeansModulePlugin implements Plugin<Project> {
             }
         }
         return sb.toString();
+    }
+
+    private static Project getProjectbyCodeNameBase(Project project, String codeNameBase) {
+        NbClusterContainer clusters = project.getRootProject().getExtensions().getByType(NbClusterContainer.class);
+        return clusters.getProjectByCodeName(codeNameBase);
     }
 
     private static String classPathEntry(NbModule module) {

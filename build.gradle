@@ -19,6 +19,8 @@
 
 apply plugin: org.netbeans.gradle.nbsupport.nb.support.NetBeansClusterPlugin
 
+description = 'NetBeans IDE'
+
 task clean(type: Delete) {
     delete 'build'
 }
@@ -32,3 +34,20 @@ clusters {
         
     }
 }
+
+project(':apisupport').description = 'API Support'
+project(':cpplite').description = 'CPP Lite'
+project(':enterprise').description = 'Enterprise'
+project(':ergonomics').description = 'Ergonomics'
+project(':extide').description = 'IDE Extensions'
+project(':groovy').description = 'Groovy'
+project(':harness').description = 'IDE Test Harness'
+project(':ide').description = 'IDE'
+project(':java').description = 'Java'
+project(':javafx').description = 'JavaFX'
+project(':nb').description = 'NetBeans IDE Branding'
+project(':php').description = 'PHP'
+project(':platform').description = 'Platform'
+project(':profiler').description = 'Profiler'
+project(':webcommon').description = 'Web Common'
+project(':websvccommon').description = 'Web Services Common'
