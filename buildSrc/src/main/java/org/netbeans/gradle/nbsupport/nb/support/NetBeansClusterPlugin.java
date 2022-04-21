@@ -27,17 +27,18 @@ public class NetBeansClusterPlugin implements Plugin<Project>{
 
     @Override
     public void apply(Project project) {
-        for (Project subproject : project.getSubprojects()) {
-            NbBuildExtension nbbuild = new NbBuildExtension();
-            NbProjectExtension nbproject = new NbProjectExtension(subproject);
-            subproject.getExtensions().add("nbbuild", nbbuild);
-            subproject.getExtensions().add("nbproject", nbproject);
-        }
-        for (Project subproject : project.getSubprojects()) {
-            subproject.getPluginManager().apply(NetBeansModulePlugin.class);
-        }
         NbClusterContainer clusters = project.getObjects().newInstance(DefaultNbClusterContainer.class, project);
         project.getExtensions().add("clusters", clusters);
+
+        for (Project subproject : project.getSubprojects()) {
+            if (subproject.getParent() != subproject.getRootProject()) {
+            }
+        }
+        for (Project subproject : project.getSubprojects()) {
+            if (subproject.getParent() != subproject.getRootProject()) {
+                subproject.getPluginManager().apply(NetBeansModulePlugin.class);
+            }
+        }
         project.afterEvaluate((Project prj) -> {
             NbClusterContainer c = prj.getExtensions().getByType(NbClusterContainer.class);
             for (NbCluster cluster : c) {

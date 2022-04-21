@@ -32,6 +32,7 @@ import org.gradle.api.reflect.TypeOf;
 import org.gradle.api.Project;
 import org.gradle.api.file.FileCollection;
 import org.gradle.internal.reflect.Instantiator;
+import org.gradle.tooling.BuildException;
 
 /**
  *
@@ -46,6 +47,7 @@ public class DefaultNbClusterContainer extends AbstractValidatingNamedDomainObje
     private static final String LIST_SUFFIX = ".list";
 
     private final Project project;
+    private final Map<String, String> codeBaseName2ProjectPath = new HashMap<>();
 
     @Inject
     public DefaultNbClusterContainer(Project project, Instantiator instantiator, CollectionCallbackActionDecorator callbackActionDecorator) {
@@ -80,23 +82,27 @@ public class DefaultNbClusterContainer extends AbstractValidatingNamedDomainObje
         for (String propName : props.stringPropertyNames()) {
             if (propName.startsWith(CLUSTER_PREFIX) && propName.endsWith(DIR_SUFFIX)) {
                 String clusterName = propName.substring(CLUSTER_PREFIX.length(), propName.length() - DIR_SUFFIX.length());
+                String clusterDirName = props.getProperty(CLUSTER_PREFIX + clusterName + DIR_SUFFIX);
                 String moduleList = props.getProperty(CLUSTER_PREFIX + clusterName);
                 String[] modules = moduleList.split(",");
-                File clusterDir = new File(project.getRootDir(), clusterName);
-                Set<String> codeBaseNames = new LinkedHashSet<>();
-                for (String module : modules) {
-                    File moduleDir = new File(clusterDir, module);
-                    String codeNameBase = projectsByDir.get(moduleDir);
-                    if (codeNameBase != null) {
-                        codeBaseNames.add(codeNameBase);
-                    } else {
-                        //System.out.println("Cannot identify project at: " + moduleDir.getAbsolutePath());
+                File clusterDir = new File(project.getRootDir(), clusterDirName);
+                if (clusterDir.isDirectory()) {
+                    Set<String> codeBaseNames = new LinkedHashSet<>();
+                    for (String module : modules) {
+                        File moduleDir = new File(clusterDir, module);
+                        String codeNameBase = projectsByDir.get(moduleDir);
+                        if (codeNameBase != null) {
+                            codeBaseNames.add(codeNameBase);
+                        } else {
+                            //System.out.println("Cannot identify project at: " + moduleDir.getAbsolutePath());
+                        }
                     }
-                }
-                if (!codeBaseNames.isEmpty()) {
-                    NbCluster cluster = maybeCreate(clusterName);
-                    for (String codeBaseName : codeBaseNames) {
-                        cluster.project(codeBaseName);
+                    if (!codeBaseNames.isEmpty()) {
+                        NbCluster cluster = maybeCreate(clusterName);
+                        for (String codeBaseName : codeBaseNames) {
+                            cluster.project(codeBaseName);
+                            codeBaseName2ProjectPath.put(codeBaseName, projectName(clusterDirName, codeBaseName));
+                        }
                     }
                 }
             }
@@ -148,4 +154,17 @@ public class DefaultNbClusterContainer extends AbstractValidatingNamedDomainObje
         return project.files((Object[]) relPaths.toArray(new String[relPaths.size()]));
     }
 
+    @Override
+    public Project getProjectByCodeName(String codeNameBase) {
+        String projectPath = codeBaseName2ProjectPath.get(codeNameBase);
+        if (projectPath == null) {
+            System.out.println(codeBaseName2ProjectPath);
+            throw new BuildException("No project found for: " + codeNameBase, new NullPointerException());
+        }
+        return project.project(projectPath);
+    }
+
+    private static String projectName(String cluster, String codeBaseName) {
+        return ":" + cluster + ":" + codeBaseName;
+    }
 }

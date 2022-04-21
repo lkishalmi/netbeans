@@ -92,7 +92,8 @@ public final class NbModule {
     }
 
     NbModule findOrLoadModule(String codeNameBase) {
-        Project prj = project.findProject(":" + codeNameBase);
+        Project root = project.getRootProject();
+        Project prj = root.getExtensions().findByType(NbClusterContainer.class).getProjectByCodeName(codeNameBase);
         if (prj != null) {
             NbProjectExtension ext = prj.getExtensions().findByType(NbProjectExtension.class);
             if (ext == null) {
