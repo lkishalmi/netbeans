@@ -9,7 +9,7 @@ task copyWindowsLauncher(type: Copy) {
     into nbproject.moduleDestDir
 }
 
-copyExternals.dependsOn(copyUnixLauncher, copyWindowsLauncher)
+//copyExternals.dependsOn(copyUnixLauncher, copyWindowsLauncher)
 
 test {
   forkEvery = 1

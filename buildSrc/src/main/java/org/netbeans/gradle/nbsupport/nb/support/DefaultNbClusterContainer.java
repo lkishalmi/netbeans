@@ -25,6 +25,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
 import javax.inject.Inject;
 import org.gradle.api.internal.AbstractValidatingNamedDomainObjectContainer;
 import org.gradle.api.internal.CollectionCallbackActionDecorator;
@@ -47,12 +48,19 @@ public class DefaultNbClusterContainer extends AbstractValidatingNamedDomainObje
     private static final String LIST_SUFFIX = ".list";
 
     private final Project project;
-    private final Map<String, String> codeBaseName2ProjectPath = new HashMap<>();
+    private final Map<String, String> codeBaseName2ProjectPath = new TreeMap<>();
 
     @Inject
     public DefaultNbClusterContainer(Project project, Instantiator instantiator, CollectionCallbackActionDecorator callbackActionDecorator) {
         super(NbCluster.class, instantiator, (NbCluster c) -> c.getName(), callbackActionDecorator);
         this.project = project;
+        for (Project subproject : project.getSubprojects()) {
+            String[] path = subproject.getPath().split(":");
+            if (path.length > 2) {
+                String codeNameBase = path[2];
+                codeBaseName2ProjectPath.put(codeNameBase, subproject.getPath());
+            }
+        }
     }
 
     @Override
@@ -96,12 +104,16 @@ public class DefaultNbClusterContainer extends AbstractValidatingNamedDomainObje
                         } else {
                             //System.out.println("Cannot identify project at: " + moduleDir.getAbsolutePath());
                         }
+                        File testModuleDir = new File(clusterDir, module + "-test");
+                        if (projectsByDir.containsKey(testModuleDir)) {
+                            codeBaseNames.add(projectsByDir.get(testModuleDir));
+                        }
                     }
                     if (!codeBaseNames.isEmpty()) {
                         NbCluster cluster = maybeCreate(clusterName);
                         for (String codeBaseName : codeBaseNames) {
-                            cluster.project(codeBaseName);
-                            codeBaseName2ProjectPath.put(codeBaseName, projectName(clusterDirName, codeBaseName));
+                            cluster.project(projectName(clusterDirName, codeBaseName));
+                            //codeBaseName2ProjectPath.put(codeBaseName, projectName(clusterDirName, codeBaseName));
                         }
                     }
                 }
@@ -143,6 +155,7 @@ public class DefaultNbClusterContainer extends AbstractValidatingNamedDomainObje
                 }
             }
         }
+//        codeBaseName2ProjectPath.forEach((k, v) -> System.out.println( k + " -> " + v));
     }
 
     @Override
@@ -157,11 +170,7 @@ public class DefaultNbClusterContainer extends AbstractValidatingNamedDomainObje
     @Override
     public Project getProjectByCodeName(String codeNameBase) {
         String projectPath = codeBaseName2ProjectPath.get(codeNameBase);
-        if (projectPath == null) {
-            System.out.println(codeBaseName2ProjectPath);
-            throw new BuildException("No project found for: " + codeNameBase, new NullPointerException());
-        }
-        return project.project(projectPath);
+        return projectPath != null ? project.project(projectPath) : null;
     }
 
     private static String projectName(String cluster, String codeBaseName) {

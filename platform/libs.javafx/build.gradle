@@ -2,11 +2,18 @@ nbbuild.generateCopyExternals = false
 
 task copyJavaFxLib(type: Copy) {
     from zipTree('external/lib-javafx-13.03-beta.nbm').files
-    into file("$buildDir/libs")
+    into file("$buildDir/external")
     include '**/javafx-2.2.4.jar'
 }
-copyExternals.dependsOn(copyJavaFxLib)
 
-dependencies {
-    api files("$buildDir/libs/javafx-2.2.4.jar")
+task rejarJavaFxLib(type: Jar) {
+    dependsOn(copyJavaFxLib)
+    from zipTree("${buildDir}/external/javafx-2.2.4.jar")
+    destinationDirectory = file("${buildDir}/libs")
+    archiveFileName = 'javafx-2.2.4.jar'
 }
+
+artifacts {
+    api(rejarJavaFxLib)
+}
+

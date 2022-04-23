@@ -15,4 +15,6 @@ task rejarCommonsLogging(type: Jar) {
     )
 }
 
-copyExternals.dependsOn(rejarCommonsLogging)
+artifacts {
+    externals(rejarCommonsLogging)
+}

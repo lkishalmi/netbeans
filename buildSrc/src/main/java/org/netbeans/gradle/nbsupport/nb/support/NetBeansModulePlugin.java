@@ -15,6 +15,7 @@
  */
 package org.netbeans.gradle.nbsupport.nb.support;
 
+import groovy.lang.Closure;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -26,6 +27,8 @@ import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.dsl.ArtifactHandler;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.CopySpec;
 import org.gradle.api.file.DuplicatesStrategy;
@@ -52,7 +55,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
         
-        project.getPluginManager().apply("java");
+        project.getPluginManager().apply("java-library");
 
         JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
         //java.setSourceCompatibility(JavaVersion.toVersion(nbproject.getProperty("javac.source")));
@@ -70,9 +73,15 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         prepareSourceSets(project);
         updateCompileTasks(project);
 
-        project.getTasks().register("copyExternals");
+        Configuration externals = project.getConfigurations().create("externals");
+        externals.setCanBeConsumed(true);
+        externals.setCanBeResolved(false);
+
+        project.getConfigurations().findByName("implementation").extendsFrom(externals);
         addNbDependenciesTask(project);
 
+        copyTestData(project);
+        project.beforeEvaluate((Project prj) -> beforeEvaluate(prj));
         project.afterEvaluate((Project prj) -> afterEvaluate(prj));
         
         /*
@@ -92,15 +101,19 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         }*/
     }
 
+    private void beforeEvaluate(Project project) {
+        copyExternals(project);
+        prepareDependencies(project);
+    }
+
     private void afterEvaluate(Project project) {
         NbProjectExtension nbproject = project.getExtensions().getByType(NbProjectExtension.class);        
         
-            copyExternals(project);
-            if (!nbproject.isTestOnly()) {
-                updateJarTask(project);
-            }
-            updateTestTask(project);
-        
+        if (!nbproject.isTestOnly()) {
+            updateJarTask(project);
+        }
+        updateTestTask(project);
+
     }
     
     private void addNbDependenciesTask(Project prj) {
@@ -166,7 +179,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
 
         if (!nbProject.isTestOnly()) {
             for (NbModule.Dependency dependency : module.getDependencies(NbModule.DependencyType.MAIN)) {
-                Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
+                Project dprj = getProjectByCodeNameBase(prj, dependency.getCodeNameBase());
                 dh.add("implementation", dprj);
                 if (dependency.isBuildPrerequisite() || nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
                     dh.add("annotationProcessor", dprj);
@@ -176,7 +189,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         }
 
         if (nbProject.isTestOnly()) {
-            Project dprj = prj.findProject(":" + module.getCodeNameBase());
+            Project dprj = getProjectByCodeNameBase(prj, module.getCodeNameBase());
             dh.add("testImplementation", dprj);
             dh.add("testAnnotationProcessor", dprj);
         } else {
@@ -187,49 +200,47 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         Set<? extends NbModule.Dependency> unitTestDeps = module.getDependencies(NbModule.DependencyType.TEST_UNIT);
         for (NbModule.Dependency dependency : unitTestDeps) {
             if (dependency.isTest()) {
-                Project dprj = prj.findProject(":" + dependency.getCodeNameBase() + "-test");
-                String ppath = ":" + dependency.getCodeNameBase();
-                if (dprj != null) {
-                    ppath += "-test";
+                Project dprj = hasProjectByCodeNameBase(prj, dependency.getCodeNameBase() + "-test")
+                        ? getProjectByCodeNameBase(prj, dependency.getCodeNameBase() + "-test")
+                        : getProjectByCodeNameBase(prj, dependency.getCodeNameBase());
+                dh.add("testImplementation", dh.project(Map.of("path", dprj.getPath(), "configuration", "testApi")));
+            }
+            if ( hasProjectByCodeNameBase(prj, dependency.getCodeNameBase()) ) {
+                Project dprj = getProjectByCodeNameBase(prj, dependency.getCodeNameBase());
+                dh.add("testImplementation", dprj);
+                if (nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
+                    dh.add("testAnnotationProcessor", dprj);
                 }
-                Map<String, String> pdep = Map.of("path", ppath, "configuration", "testApi");
-                dh.add("testImplementation", dh.project(pdep));
-            }
-            Project dprj = prj.findProject(":" + dependency.getCodeNameBase());
-            if ( dprj == null ) {
+            } else {
                 System.out.println("No dependency for " + dependency.getCodeNameBase() + " in " + prj.getName());
-            }
-            dh.add("testImplementation", dprj);
-            if (nbbuild.getAnnotationProcessors().contains(dependency.getCodeNameBase())) {
-                dh.add("testAnnotationProcessor", dprj);
             }
         }
     }
 
+    private void createPublicPackageJar(Project prj) {
+        prj.getTasks().register("publicJar", Jar.class, (Jar jar) -> {
+            proj
+        });
+    }
     private void copyExternals(Project prj) {
         NbBuildExtension nbbuild = prj.getExtensions().getByType(NbBuildExtension.class);
         NbProjectExtension nbproject = prj.getExtensions().getByType(NbProjectExtension.class);
-        List<TaskProvider> externals = new LinkedList<>();
+        ArtifactHandler artifacts = prj.getArtifacts();
         if (nbbuild.isGenerateCopyExternals()) {
             for (Map.Entry<String, String> ext : nbproject.getModule().getClassPathExtensions().entrySet()) {
                 if (ext.getValue() != null) {
                     String taskName = "copyExt-" + ext.getKey().replace('/', '_');
-                    externals.add(prj.getTasks().register(taskName, Copy.class, (Copy copy) -> {
+                    TaskProvider<Copy> task = prj.getTasks().register(taskName, Copy.class, (Copy copy) -> {
                         File srcFile = new File(prj.getProjectDir(), ext.getValue());
                         File destFile = new File(nbproject.getModuleDestDir(), ext.getKey());
                         copy.from(srcFile.getParentFile()).into(destFile.getParentFile());
                         copy.include(srcFile.getName());
                         copy.rename(srcFile.getName(), destFile.getName());
-                    }));
+                    });
+                    artifacts.add("externals", task);
                 }
             }
         }
-        TaskProvider copyExt = prj.getTasks().named("copyExternals",(Task copy) -> {
-            for (TaskProvider ext : externals) {
-                copy.dependsOn(ext);
-            }
-        });
-        prj.getTasks().named("compileJava").configure((Task task) -> task.dependsOn(copyExt));
     }
 
     private void copyTestData(Project prj) {
@@ -356,7 +367,7 @@ public class NetBeansModulePlugin implements Plugin<Project> {
                     sb.append('/').append(dep.getReleaseVersion());
                 }
                 if (dep.isImplementationVersion()) {
-                    Project dprj = getProjectbyCodeNameBase(prj, dep.getCodeNameBase());
+                    Project dprj = getProjectByCodeNameBase(prj, dep.getCodeNameBase());
                     if (dprj != null) {
                         NbProjectExtension dext = dprj.getExtensions().getByType(NbProjectExtension.class);
                         sb.append(" = ").append(dext.getImplementationVersion());
@@ -370,9 +381,18 @@ public class NetBeansModulePlugin implements Plugin<Project> {
         return sb.toString();
     }
 
-    private static Project getProjectbyCodeNameBase(Project project, String codeNameBase) {
+    private static Project getProjectByCodeNameBase(Project project, String codeNameBase) {
         NbClusterContainer clusters = project.getRootProject().getExtensions().getByType(NbClusterContainer.class);
-        return clusters.getProjectByCodeName(codeNameBase);
+        Project ret = clusters.getProjectByCodeName(codeNameBase);
+        if (ret == null) {
+            throw new BuildException("No project found for: " + codeNameBase, new NullPointerException());
+        }
+        return ret;
+    }
+
+    private static boolean hasProjectByCodeNameBase(Project project, String codeNameBase) {
+        NbClusterContainer clusters = project.getRootProject().getExtensions().getByType(NbClusterContainer.class);
+        return clusters.getProjectByCodeName(codeNameBase) != null;
     }
 
     private static String classPathEntry(NbModule module) {

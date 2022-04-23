@@ -74,7 +74,7 @@ public final class NbModule {
             }
             for (Dependency dep: directDeps) {
                 ret.add(dep);
-                if (!dep.getCodeNameBase().equals(getCodeNameBase()) && dep.isRecursive()) {
+/*                if (!dep.getCodeNameBase().equals(getCodeNameBase()) && dep.isRecursive()) {
 
                     NbModule m = findOrLoadModule(dep.getCodeNameBase());
                     if (m != null) {
@@ -83,7 +83,7 @@ public final class NbModule {
                     } else {
                         throw new IllegalStateException("No module '" + dep.getCodeNameBase() + "' as a depencency of: " + getCodeNameBase());
                     }
-                }
+                }*/
             }
             ret = !ret.isEmpty() ? ret : Collections.emptySet();
             depCache.put(type, ret);
@@ -97,7 +97,7 @@ public final class NbModule {
         if (prj != null) {
             NbProjectExtension ext = prj.getExtensions().findByType(NbProjectExtension.class);
             if (ext == null) {
-                System.out.println("No extension for" + prj.getName());
+                System.out.println("No extension for " + prj.getPath());
             }
             return ext.getModule();
         }
