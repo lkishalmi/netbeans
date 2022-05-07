@@ -19,5 +19,5 @@ task rejarCommonsCodec(type: Jar) {
 }
 
 artifacts {
-    externals(rejarCommonsCodec)
+    runtimeElements(rejarCommonsCodec)
 }

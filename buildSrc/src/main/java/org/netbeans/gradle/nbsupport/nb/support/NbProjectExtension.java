@@ -19,13 +19,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.jar.Attributes;
@@ -194,16 +196,73 @@ public final class NbProjectExtension {
         return testOnly ? moduleName + " Test" : moduleName;
     }
 
+    NbModule findOrLoadModule(String codeNameBase) {
+        Project root = project.getRootProject();
+        Project prj = root.getExtensions().findByType(NbClusterContainer.class).getProjectByCodeName(codeNameBase);
+        if (prj != null) {
+            NbProjectExtension ext = prj.getExtensions().findByType(NbProjectExtension.class);
+            if (ext == null) {
+                System.out.println("No extension for " + prj.getPath());
+            }
+            return ext.getModule();
+        }
+        throw new IllegalArgumentException("No project dependency ':" + codeNameBase + "' found for :" + project.getName());
+    }
+
+    public void inspectDependencies(PrintStream out) throws IOException {
+        for (NbModule.DependencyType type : NbModule.DependencyType.values()) {
+            inspectDependencies(0, type, out);
+            out.println();
+        }
+    }
+
+    public void inspectDependencies(int level, NbModule.DependencyType type, PrintStream out) throws IOException {
+        NbModule module = getModule();
+        Set<? extends NbModule.Dependency> directDeps;
+        switch (type) {
+            case TEST_UNIT:
+                directDeps = module.getDirectTestDependencies("unit");
+                break;
+            default:
+                directDeps = module.directMainDependencies;
+        }
+        if (level == 0) {
+            out.println(module.codeNameBase + " " + type + " dependencies:");
+        }
+        for (NbModule.Dependency dep: directDeps) {
+            for (int i = 0; i < level + 1; i++) {
+                out.print("  ");
+            }
+            out.print("- " + dep.codeNameBase);
+            if (dep.releaseVersion.isPresent()) out.print("/" + dep.releaseVersion.get());
+            if (dep.implementationVersion || dep.specificationVersion.isPresent()) {
+                out.print(dep.implementationVersion ? " = " : " > ");
+                out.print(dep.implementationVersion ? "<impl>" : dep.specificationVersion.get());
+            }
+            if (dep.test) out.print(" (t)");
+            if (dep.recursive) out.print(" (r)");
+            out.println();
+            if (dep.recursive) {
+                NbModule m = findOrLoadModule(dep.codeNameBase);
+                if (m != null) {
+                    inspectDependencies(level + 1, dep.test? NbModule.DependencyType.TEST_UNIT : NbModule.DependencyType.MAIN, out);
+                } else {
+                    throw new IllegalStateException("No module '" + dep.codeNameBase+ "' as a depencency of: " + module.codeNameBase);
+                }
+            }
+        }
+    }
+
+
     NbModule parseProjectXML(File f) {
         NbModule ret = null;
         XMLInputFactory factory = XMLInputFactory.newFactory();
         try (InputStream is = new FileInputStream(f)) {
             XMLEventReader events = factory.createXMLEventReader(is);
-            ret = new NbModule(project);
             while (events.hasNext()) {
                 XMLEvent tag = events.nextEvent();
                 if (tag.isStartElement() && "data".equals(tag.asStartElement().getName().getLocalPart())) {
-                    processData(events, ret);
+                    ret = processData(events);
                 }
             }
         } catch (IOException|XMLStreamException ex) {
@@ -212,11 +271,13 @@ public final class NbProjectExtension {
         return ret;
     }
 
-    private static void processData(XMLEventReader events, NbModule module) throws XMLStreamException {
-        Map<String, String> cpExtension = new LinkedHashMap<>();
+    private static NbModule processData(XMLEventReader events) throws XMLStreamException {
+        Set<NbModule.ClasspathExtension> cpExtension = new LinkedHashSet<>();
         List<String> publicPackages = new LinkedList<>();
         List<String> friendPackages = new LinkedList<>();
-        List<String> friendModules = new LinkedList<>();
+        Set<String> friendModules = new HashSet<>();
+        Set<NbModule.Dependency> directMainDependencies = null;
+        String codeNameBase = null;
         while(events.hasNext()) {
             XMLEvent evt = events.nextEvent();
             if (evt.isStartElement()) {
@@ -224,13 +285,13 @@ public final class NbProjectExtension {
                 String tag = element.getName().getLocalPart();
                 switch (tag) {
                     case "code-name-base":
-                        module.codeNameBase = events.getElementText();
+                        codeNameBase = events.getElementText();
                         break;
                     case "module-dependencies":
-                        module.directMainDependencies = processDependencies(events, "module-dependencies", "dependency");
+                        directMainDependencies = processDependencies(events, "module-dependencies", "dependency");
                         break;
                     case "test-dependencies":
-                        processTestDependencies(events, module);
+                        //processTestDependencies(events, module);
                         break;
                     case "class-path-extension":
                         String relPath = null;
@@ -250,7 +311,7 @@ public final class NbProjectExtension {
                             }
                             if (nevt.isEndElement() && nevt.asEndElement().getName().equals(element.getName())) break;
                         }
-                        cpExtension.put(relPath, origin);
+                        cpExtension.add(new NbModule.ClasspathExtension(relPath, origin));
                         break;
                     case "public-packages":
                         while (events.hasNext()) {
@@ -258,10 +319,10 @@ public final class NbProjectExtension {
                             if (nevt.isStartElement()) {
                                 String ntag = nevt.asStartElement().getName().getLocalPart();
                                 if ("package".equals(ntag)) {
-                                    publicPackages.add(events.getElementText() + ".*");
+                                    publicPackages.add(events.getElementText().replace('.', '/') + "/*");
                                 }
                                 if ("subpackages".equals(ntag)) {
-                                    publicPackages.add(events.getElementText() + ".**");
+                                    publicPackages.add(events.getElementText().replace('.', '/') + "/**");
                                 }
                             }
                             if (nevt.isEndElement() && nevt.asEndElement().getName().equals(element.getName())) break;
@@ -277,7 +338,7 @@ public final class NbProjectExtension {
                                         friendModules.add(events.getElementText());
                                         break;
                                     case "package":
-                                        friendPackages.add(events.getElementText());
+                                        friendPackages.add(events.getElementText().replace('.', '/') + "/*");
                                         break;
                                 }
                             }
@@ -288,18 +349,7 @@ public final class NbProjectExtension {
             }
             if (evt.isEndElement() && "data".equals(evt.asEndElement().getName().getLocalPart())) break;
         }
-        if (!cpExtension.isEmpty()) {
-            module.classPathExtensions = cpExtension;
-        }
-        if (!publicPackages.isEmpty()) {
-            module.publicPackages = publicPackages;
-        }
-        if (!friendPackages.isEmpty()) {
-            module.friendPackages = friendPackages;
-        }
-        if (!friendModules.isEmpty()) {
-            module.friendModules = friendModules;
-        }
+        return new NbModule(codeNameBase, cpExtension, publicPackages, friendPackages, friendModules, directMainDependencies);
     }
 
     private static void processTestDependencies(XMLEventReader events, NbModule module) throws XMLStreamException {
@@ -320,55 +370,79 @@ public final class NbProjectExtension {
 
     private static Set<NbModule.Dependency> processDependencies(XMLEventReader events, String endTag, String dependencyTag) throws XMLStreamException {
         Set<NbModule.Dependency> ret = new LinkedHashSet<>();
-        NbModule.Dependency dep = null;
         while(events.hasNext()) {
             XMLEvent evt = events.nextEvent();
             if (evt.isStartElement()) {
                 StartElement startElement = evt.asStartElement();
                 String tag = startElement.getName().getLocalPart();
                 if (tag.equals(dependencyTag)) {
-                    dep = new NbModule.Dependency();
-                } else {
-                    switch (tag) {
-                        case "code-name-base":
-                            dep.codeNameBase = events.getElementText();
-                            break;
-                        case "build-prerequisite":
-                            dep.buildRequisite = true;
-                            break;
-                        case "compile-dependency":
-                            dep.compileDependency = true;
-                            break;
-                        case "run-dependency":
-                            dep.runtime = true;
-                            break;
-                        case "recursive":
-                            dep.recursive = true;
-                            break;
-                        case "test":
-                            dep.test = true;
-                            break;
-                        case "implementation-version":
-                            dep.implementationVersion = true;
-                            break;
-                        case "release-version":
-                            dep.releaseVersion = events.getElementText();
-                            break;
-                        case "specification-version":
-                            dep.specificationVersion = events.getElementText();
-                            break;
-                        default:
-                    }
+                    ret.add(processDependency(events, dependencyTag));
+                }
+            }
+            if (evt.isEndElement()) {
+                EndElement endElement = evt.asEndElement();
+                String tag = endElement.getName().getLocalPart();
+                if (tag.equals(endTag)) break;
+            }
+        }
+        return ret;
+    }
+
+    private static NbModule.Dependency processDependency(XMLEventReader events, String dependencyTag) throws XMLStreamException {
+        String codeNameBase = null;
+        boolean buildRequisite = false;
+        boolean runtime = false;
+        boolean compileDependency = false;
+        boolean recursive = false;
+        boolean test = false;
+        boolean implementationVersion = false;
+        Optional<String> releaseVersion = Optional.empty();
+        Optional<String> specificationVersion = Optional.empty();
+
+        while(events.hasNext()) {
+            XMLEvent evt = events.nextEvent();
+            if (evt.isStartElement()) {
+                StartElement startElement = evt.asStartElement();
+                String tag = startElement.getName().getLocalPart();
+                switch (tag) {
+                    case "code-name-base":
+                        codeNameBase = events.getElementText();
+                        break;
+                    case "build-prerequisite":
+                        buildRequisite = true;
+                        break;
+                    case "compile-dependency":
+                        compileDependency = true;
+                        break;
+                    case "run-dependency":
+                        runtime = true;
+                        break;
+                    case "recursive":
+                        recursive = true;
+                        break;
+                    case "test":
+                        test = true;
+                        break;
+                    case "implementation-version":
+                        implementationVersion = true;
+                        break;
+                    case "release-version":
+                        releaseVersion = Optional.of(events.getElementText());
+                        break;
+                    case "specification-version":
+                        specificationVersion = Optional.of(events.getElementText());
+                        break;
+                    default:
                 }
             }
             if (evt.isEndElement()) {
                 EndElement endElement = evt.asEndElement();
                 String tag = endElement.getName().getLocalPart();
                 if (tag.equals(dependencyTag)) {
-                    ret.add(dep);
-                } else if (tag.equals(endTag)) break;
+                    break;
+                }
             }
         }
-        return ret;
+        return new NbModule.Dependency(codeNameBase, buildRequisite, runtime, compileDependency, recursive, test, implementationVersion, releaseVersion, specificationVersion);
     }
 }

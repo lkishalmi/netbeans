@@ -15,16 +15,14 @@
  */
 package org.netbeans.gradle.nbsupport.nb.support;
 
-import java.io.IOException;
-import java.io.PrintStream;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import org.gradle.api.Project;
 
 /**
  *
@@ -34,30 +32,35 @@ public final class NbModule {
 
     public enum DependencyType { MAIN, TEST_UNIT }
 
-    String codeNameBase;
-    Map<String, String> classPathExtensions;
-    List<String> publicPackages;
-    List<String> friendPackages;
-    List<String> friendModules;
-    Set<Dependency> directMainDependencies;
-    Map<String, Set<Dependency>> directTestDependencies = new HashMap<>();
-    Map<DependencyType, Set<Dependency>> depCache = new EnumMap(DependencyType.class);
-    final Project project;
+    final String codeNameBase;
+    final Set<ClasspathExtension> classPathExtensions;
+    final List<String> publicPackages;
+    final List<String> friendPackages;
+    final Set<String> friendModules;
+    final Set<Dependency> directMainDependencies;
+    final Map<String, Set<Dependency>> directTestDependencies = new HashMap<>();
+    final Map<DependencyType, Set<Dependency>> depCache = new EnumMap(DependencyType.class);
 
-    NbModule(Project project) {
-        this.project = project;
+    NbModule(String codeNameBase, Set<ClasspathExtension> classPathExtensions, List<String> publicPackages, List<String> friendPackages, Set<String> friendModules, Set<Dependency> directMainDependencies) {
+        this.codeNameBase = codeNameBase;
+        this.classPathExtensions = createSet(classPathExtensions);
+        this.publicPackages = createList(publicPackages);
+        this.friendPackages = createList(friendPackages);
+        this.friendModules = createSet(friendModules);
+        this.directMainDependencies = createSet(directMainDependencies);
     }
 
-    public String getCodeNameBase() {
-        return codeNameBase;
+
+    public boolean isFriend(NbModule friend) {
+        return !publicPackages.isEmpty() || friendModules.contains(friend.codeNameBase);
     }
 
-    public Map<String, String> getClassPathExtensions() {
-        return classPathExtensions != null ? classPathExtensions : Collections.emptyMap();
-    }
-
-    public List<String> getPublicPackages() {
-        return publicPackages != null ? publicPackages : Collections.emptyList();
+    public boolean isPureExternalWrapper() {
+        return getDependencies(DependencyType.MAIN).isEmpty()
+                && getDependencies(DependencyType.TEST_UNIT).isEmpty()
+                && publicPackages.isEmpty()
+                && friendPackages.isEmpty()
+                && !classPathExtensions.isEmpty();
     }
 
     Set<Dependency> getDependencies(DependencyType type) {
@@ -70,7 +73,7 @@ public final class NbModule {
                     directDeps = getDirectTestDependencies("unit");
                     break;
                 default:
-                    directDeps = getDirectMainDependencies();
+                    directDeps = directMainDependencies;
             }
             for (Dependency dep: directDeps) {
                 ret.add(dep);
@@ -91,116 +94,70 @@ public final class NbModule {
         return ret;
     }
 
-    NbModule findOrLoadModule(String codeNameBase) {
-        Project root = project.getRootProject();
-        Project prj = root.getExtensions().findByType(NbClusterContainer.class).getProjectByCodeName(codeNameBase);
-        if (prj != null) {
-            NbProjectExtension ext = prj.getExtensions().findByType(NbProjectExtension.class);
-            if (ext == null) {
-                System.out.println("No extension for " + prj.getPath());
-            }
-            return ext.getModule();
-        }
-        throw new IllegalArgumentException("No project dependency ':" + codeNameBase + "' found for :" + project.getName());
-    }
-
-    Set<? extends Dependency> getDirectMainDependencies() {
-        return directMainDependencies != null ? directMainDependencies : Collections.emptySet();
-    }
-
     Set<? extends Dependency> getDirectTestDependencies(String testType) {
         Set<Dependency> deps = directTestDependencies.get(testType);
         return deps != null ? deps : Collections.emptySet();
     }
 
-    public void inspectDependencies(PrintStream out) throws IOException {
-        for (DependencyType type : DependencyType.values()) {
-            inspectDependencies(0, type, out);
-            out.println();
+    private static <T> Set<T> createSet(Set<T> origin) {
+        if (origin == null) {
+            return Collections.emptySet();
+        } else {
+            switch(origin.size()) {
+                case 0: return Collections.emptySet();
+                case 1: return Collections.singleton(origin.iterator().next());
+                default: return Collections.unmodifiableSet(origin);
+            }
         }
     }
 
-    public void inspectDependencies(int level, DependencyType type, PrintStream out) throws IOException {
-        Set<? extends Dependency> directDeps;
-        switch (type) {
-            case TEST_UNIT:
-                directDeps = getDirectTestDependencies("unit");
-                break;
-            default:
-                directDeps = getDirectMainDependencies();
-        }
-        if (level == 0) {
-            out.println(codeNameBase + " " + type + " dependencies:");
-        }
-        for (Dependency dep: directDeps) {
-            for (int i = 0; i < level + 1; i++) {
-                out.print("  ");
-            }
-            out.print("- " + dep.getCodeNameBase());
-            if (dep.getReleaseVersion() != null) out.print("/" + dep.getReleaseVersion());
-            if (dep.isImplementationVersion() || dep.getSpecificationVersion() != null) {
-                out.print(dep.isImplementationVersion() ? " = " : " > ");
-                out.print(dep.isImplementationVersion() ? "<impl>" : dep.getSpecificationVersion());
-            }
-            if (dep.isTest()) out.print(" (t)");
-            if (dep.isRecursive()) out.print(" (r)");
-            out.println();
-            if (dep.isRecursive()) {
-                NbModule m = findOrLoadModule(dep.getCodeNameBase());
-                if (m != null) {
-                    m.inspectDependencies(level + 1, dep.isTest() ? DependencyType.TEST_UNIT : DependencyType.MAIN, out);
-                } else {
-                    throw new IllegalStateException("No module '" + dep.getCodeNameBase() + "' as a depencency of: " + getCodeNameBase());
-                }
+    private static <T> List<T> createList(List<T> origin) {
+        if (origin == null) {
+            return Collections.emptyList();
+        } else {
+            switch(origin.size()) {
+                case 0: return Collections.emptyList();
+                case 1: return Collections.singletonList(origin.iterator().next());
+                default: return Collections.unmodifiableList(origin);
             }
         }
+    }
+
+    public static final class ClasspathExtension {
+        public final String runtimeRelativePath;
+        public final Optional<String> binaryOrigin;
+
+        public ClasspathExtension(String runtimeRelativePath, String binaryOrigin) {
+            this.runtimeRelativePath = runtimeRelativePath;
+            this.binaryOrigin = Optional.ofNullable(binaryOrigin);
+        }
+
     }
 
     public static final class Dependency {
-        String codeNameBase;
-        boolean buildRequisite;
-        boolean runtime;
-        boolean compileDependency;
-        boolean recursive;
-        boolean test;
-        boolean implementationVersion;
-        String releaseVersion;
-        String specificationVersion;
+        public final String codeNameBase;
+        public final boolean buildRequisite;
+        public final boolean runtime;
+        public final boolean compileDependency;
+        public final boolean recursive;
+        public final boolean test;
+        public final boolean implementationVersion;
+        public final Optional<String> releaseVersion;
+        public final Optional<String> specificationVersion;
 
-        public String getCodeNameBase() {
-            return codeNameBase;
-        }
-
-        public boolean isBuildPrerequisite() {
-            return buildRequisite;
-        }
-
-        public boolean isCompileDependency() {
-            return compileDependency;
-        }
-
-        public boolean isTest() {
-            return test;
+        public Dependency(String codeNameBase, boolean buildRequisite, boolean runtime, boolean compileDependency, boolean recursive, boolean test, boolean implementationVersion, Optional<String> releaseVersion, Optional<String> specificationVersion) {
+            this.codeNameBase = codeNameBase;
+            this.buildRequisite = buildRequisite;
+            this.runtime = runtime;
+            this.compileDependency = compileDependency;
+            this.recursive = recursive;
+            this.test = test;
+            this.implementationVersion = implementationVersion;
+            this.releaseVersion = releaseVersion;
+            this.specificationVersion = specificationVersion;
         }
 
-        public boolean isRecursive() {
-            return recursive;
-        }
 
-        public boolean isImplementationVersion() {
-            return implementationVersion;
-        }
-
-        public boolean isRuntime() {
-            return runtime;
-        }
-        public String getReleaseVersion() {
-            return releaseVersion;
-        }
-
-        public String getSpecificationVersion() {
-            return specificationVersion;
-        }
     }
     
 }

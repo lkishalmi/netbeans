@@ -16,5 +16,5 @@ task rejarCommonsLogging(type: Jar) {
 }
 
 artifacts {
-    externals(rejarCommonsLogging)
+    runtimeElements(rejarCommonsLogging)
 }
