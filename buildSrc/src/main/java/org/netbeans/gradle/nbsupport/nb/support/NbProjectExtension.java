@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -44,7 +45,7 @@ import org.gradle.api.Project;
  *
  * @author lkishalmi
  */
-public final class NbProjectExtension {
+public final class NbProjectExtension implements ModuleFinder {
 
     public static final String MODULE_JAR_DIR = "module.jar.dir";
     public static final String MODULE_JAR_NAME = "module.jar.basename";
@@ -196,7 +197,8 @@ public final class NbProjectExtension {
         return testOnly ? moduleName + " Test" : moduleName;
     }
 
-    NbModule findOrLoadModule(String codeNameBase) {
+    @Override
+    public NbModule findOrLoadModule(String codeNameBase) {
         Project root = project.getRootProject();
         Project prj = root.getExtensions().findByType(NbClusterContainer.class).getProjectByCodeName(codeNameBase);
         if (prj != null) {
@@ -218,14 +220,7 @@ public final class NbProjectExtension {
 
     public void inspectDependencies(int level, NbModule.DependencyType type, PrintStream out) throws IOException {
         NbModule module = getModule();
-        Set<? extends NbModule.Dependency> directDeps;
-        switch (type) {
-            case TEST_UNIT:
-                directDeps = module.getDirectTestDependencies("unit");
-                break;
-            default:
-                directDeps = module.directMainDependencies;
-        }
+        Set<? extends NbModule.Dependency> directDeps = module.dependencies.get(type);
         if (level == 0) {
             out.println(module.codeNameBase + " " + type + " dependencies:");
         }
@@ -276,7 +271,7 @@ public final class NbProjectExtension {
         List<String> publicPackages = new LinkedList<>();
         List<String> friendPackages = new LinkedList<>();
         Set<String> friendModules = new HashSet<>();
-        Set<NbModule.Dependency> directMainDependencies = null;
+        Map<NbModule.DependencyType, Set<NbModule.Dependency>> dependencies = new EnumMap<>(NbModule.DependencyType.class);
         String codeNameBase = null;
         while(events.hasNext()) {
             XMLEvent evt = events.nextEvent();
@@ -288,10 +283,11 @@ public final class NbProjectExtension {
                         codeNameBase = events.getElementText();
                         break;
                     case "module-dependencies":
-                        directMainDependencies = processDependencies(events, "module-dependencies", "dependency");
+                        Set<NbModule.Dependency> main = new LinkedHashSet<>();
+                        processDependencies(events, main, "module-dependencies", "dependency");
                         break;
                     case "test-dependencies":
-                        //processTestDependencies(events, module);
+                        processTestDependencies(events, dependencies);
                         break;
                     case "class-path-extension":
                         String relPath = null;
@@ -349,10 +345,11 @@ public final class NbProjectExtension {
             }
             if (evt.isEndElement() && "data".equals(evt.asEndElement().getName().getLocalPart())) break;
         }
-        return new NbModule(codeNameBase, cpExtension, publicPackages, friendPackages, friendModules, directMainDependencies);
+        return new NbModule(codeNameBase, cpExtension, publicPackages, friendPackages, friendModules, directDependencies);
     }
 
-    private static void processTestDependencies(XMLEventReader events, NbModule module) throws XMLStreamException {
+    private static Map<String, Set<NbModule.Dependency>> processTestDependencies(XMLEventReader events) throws XMLStreamException {
+        Map<String, Set<NbModule.Dependency>> ret = new HashMap<>();
         while(events.hasNext()) {
             XMLEvent evt = events.nextEvent();
             if (evt.isStartElement()) {
@@ -361,22 +358,25 @@ public final class NbProjectExtension {
                 if (tag.equals("name")) {
                     String testType = events.getElementText();
                     Set<NbModule.Dependency> deps = processDependencies(events, "test-type", "test-dependency");
-                    module.directTestDependencies.put(testType, deps);
+                    if (!"unit".equals(testType)) {
+                        System.out.println("Test Type: " + testType);
+                    }
+                    ret.put(testType, deps);
                 }
             }
             if (evt.isEndElement() && "test-dependencies".equals(evt.asEndElement().getName().getLocalPart())) break;
         }
+        return ret;
     }
 
-    private static Set<NbModule.Dependency> processDependencies(XMLEventReader events, String endTag, String dependencyTag) throws XMLStreamException {
-        Set<NbModule.Dependency> ret = new LinkedHashSet<>();
+    private static void processDependencies(XMLEventReader events, Set<NbModule.Dependency> dependencies, String endTag, String dependencyTag) throws XMLStreamException {
         while(events.hasNext()) {
             XMLEvent evt = events.nextEvent();
             if (evt.isStartElement()) {
                 StartElement startElement = evt.asStartElement();
                 String tag = startElement.getName().getLocalPart();
                 if (tag.equals(dependencyTag)) {
-                    ret.add(processDependency(events, dependencyTag));
+                    dependencies.add(processDependency(events, dependencyTag));
                 }
             }
             if (evt.isEndElement()) {
@@ -385,7 +385,6 @@ public final class NbProjectExtension {
                 if (tag.equals(endTag)) break;
             }
         }
-        return ret;
     }
 
     private static NbModule.Dependency processDependency(XMLEventReader events, String dependencyTag) throws XMLStreamException {
@@ -395,7 +394,7 @@ public final class NbProjectExtension {
         boolean compileDependency = false;
         boolean recursive = false;
         boolean test = false;
-        boolean implementationVersion = false;
+        boolean implementationVersion = true;
         Optional<String> releaseVersion = Optional.empty();
         Optional<String> specificationVersion = Optional.empty();
 
@@ -427,9 +426,11 @@ public final class NbProjectExtension {
                         implementationVersion = true;
                         break;
                     case "release-version":
+                        implementationVersion = false;
                         releaseVersion = Optional.of(events.getElementText());
                         break;
                     case "specification-version":
+                        implementationVersion = false;
                         specificationVersion = Optional.of(events.getElementText());
                         break;
                     default:

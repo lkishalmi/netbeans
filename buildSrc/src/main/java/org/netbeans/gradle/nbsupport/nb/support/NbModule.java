@@ -17,37 +17,37 @@ package org.netbeans.gradle.nbsupport.nb.support;
 
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.netbeans.gradle.nbsupport.nb.support.NbModule.DependencyType.*;
 /**
  *
  * @author lkishalmi
  */
 public final class NbModule {
 
-    public enum DependencyType { MAIN, TEST_UNIT }
+    public enum DependencyType { MAIN, TEST_UNIT, TEST_FUNCTIONAL }
 
     final String codeNameBase;
     final Set<ClasspathExtension> classPathExtensions;
     final List<String> publicPackages;
     final List<String> friendPackages;
     final Set<String> friendModules;
-    final Set<Dependency> directMainDependencies;
-    final Map<String, Set<Dependency>> directTestDependencies = new HashMap<>();
-    final Map<DependencyType, Set<Dependency>> depCache = new EnumMap(DependencyType.class);
+    final Map<DependencyType, Set<Dependency>> dependencies = new EnumMap<>(DependencyType.class);
 
-    NbModule(String codeNameBase, Set<ClasspathExtension> classPathExtensions, List<String> publicPackages, List<String> friendPackages, Set<String> friendModules, Set<Dependency> directMainDependencies) {
+    NbModule(String codeNameBase, Set<ClasspathExtension> classPathExtensions, List<String> publicPackages, List<String> friendPackages, Set<String> friendModules, Map<DependencyType, Set<Dependency>> dependencies) {
         this.codeNameBase = codeNameBase;
         this.classPathExtensions = createSet(classPathExtensions);
         this.publicPackages = createList(publicPackages);
         this.friendPackages = createList(friendPackages);
         this.friendModules = createSet(friendModules);
-        this.directMainDependencies = createSet(directMainDependencies);
+        for (DependencyType type : DependencyType.values()) {
+            this.dependencies.put(type, createSet(dependencies.get(type)));
+        }
+
     }
 
 
@@ -56,47 +56,11 @@ public final class NbModule {
     }
 
     public boolean isPureExternalWrapper() {
-        return getDependencies(DependencyType.MAIN).isEmpty()
-                && getDependencies(DependencyType.TEST_UNIT).isEmpty()
+        return dependencies.get(MAIN).isEmpty()
+                && dependencies.get(TEST_UNIT).isEmpty()
                 && publicPackages.isEmpty()
                 && friendPackages.isEmpty()
                 && !classPathExtensions.isEmpty();
-    }
-
-    Set<Dependency> getDependencies(DependencyType type) {
-        Set<Dependency> ret = depCache.get(type);
-        if (ret == null) {
-            ret = new LinkedHashSet<>();
-            Set<? extends Dependency> directDeps;
-            switch (type) {
-                case TEST_UNIT:
-                    directDeps = getDirectTestDependencies("unit");
-                    break;
-                default:
-                    directDeps = directMainDependencies;
-            }
-            for (Dependency dep: directDeps) {
-                ret.add(dep);
-/*                if (!dep.getCodeNameBase().equals(getCodeNameBase()) && dep.isRecursive()) {
-
-                    NbModule m = findOrLoadModule(dep.getCodeNameBase());
-                    if (m != null) {
-                        Set<Dependency> mdeps = m.getDependencies(dep.isTest() ? DependencyType.TEST_UNIT : DependencyType.MAIN);
-                        ret.addAll(mdeps);
-                    } else {
-                        throw new IllegalStateException("No module '" + dep.getCodeNameBase() + "' as a depencency of: " + getCodeNameBase());
-                    }
-                }*/
-            }
-            ret = !ret.isEmpty() ? ret : Collections.emptySet();
-            depCache.put(type, ret);
-        }
-        return ret;
-    }
-
-    Set<? extends Dependency> getDirectTestDependencies(String testType) {
-        Set<Dependency> deps = directTestDependencies.get(testType);
-        return deps != null ? deps : Collections.emptySet();
     }
 
     private static <T> Set<T> createSet(Set<T> origin) {
@@ -134,6 +98,11 @@ public final class NbModule {
 
     }
 
+    @Override
+    public String toString() {
+        return "NbModule: " + codeNameBase;
+    }
+
     public static final class Dependency {
         public final String codeNameBase;
         public final boolean buildRequisite;
@@ -157,6 +126,10 @@ public final class NbModule {
             this.specificationVersion = specificationVersion;
         }
 
+        @Override
+        public String toString() {
+            return "DEP: " + codeNameBase;
+        }
 
     }
     

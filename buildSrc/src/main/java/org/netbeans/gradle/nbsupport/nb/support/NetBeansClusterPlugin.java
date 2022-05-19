@@ -49,7 +49,7 @@ public class NetBeansClusterPlugin implements Plugin<Project>{
                         task.dependsOn(getClusterBuildTask(dep.getName()));
                     }
                     for (String module : cluster.modules) {
-                        task.dependsOn(":" + module + ":build");
+                        task.dependsOn(":" + module + ":assemble");
                     }
                 });
             }
