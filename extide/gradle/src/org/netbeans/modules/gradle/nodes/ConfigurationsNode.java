@@ -60,8 +60,11 @@ import org.openide.nodes.ChildFactory;
 import org.openide.nodes.Children;
 import org.openide.nodes.FilterNode;
 import org.openide.nodes.Node;
+import org.openide.nodes.PropertySupport;
+import org.openide.nodes.Sheet;
 import org.openide.util.ImageUtilities;
 import org.openide.util.NbBundle;
+import org.openide.util.NbBundle.Messages;
 import org.openide.util.lookup.Lookups;
 
 /**
@@ -152,24 +155,7 @@ public class ConfigurationsNode extends AbstractNode {
 
         @Override
         protected Node createNodeForKey(GradleConfiguration conf) {
-            Children ch = conf.isEmpty() ? Children.LEAF : Children.create(new ConfigurationChildren(project, conf.getName()), false);
-            AbstractNode ret = new AbstractNode(ch);
-            ret.setName(conf.getName());
-            ret.setShortDescription(conf.getDescription());
-            StringBuilder displayName = new StringBuilder(conf.getName());
-            if (!conf.getExtendsFrom().isEmpty()) {
-                displayName.append(" [");
-                String separator = "";
-                for (GradleConfiguration ext : conf.getExtendsFrom()) {
-                    displayName.append(separator);
-                    displayName.append(ext.getName());
-                    separator = ", ";
-                }
-                displayName.append(']');
-            }
-            ret.setDisplayName(displayName.toString());
-            ret.setIconBaseWithExtension(LIBRARIES_ICON);
-            return ret;
+            return new ConfigurationNode(project, conf);
         }
 
         @Override
@@ -212,12 +198,57 @@ public class ConfigurationsNode extends AbstractNode {
 
     }
 
+    private static class ConfigurationNode extends AbstractNode {
+
+        ConfigurationNode(Project project, GradleConfiguration conf) {
+            super(conf.isEmpty() ? Children.LEAF : Children.create(new ConfigurationChildren(project, conf.getName()), false), Lookups.fixed(project, conf));
+            setName(conf.getName());
+            setShortDescription(conf.getDescription());
+            StringBuilder displayName = new StringBuilder(conf.getName());
+            if (!conf.getExtendsFrom().isEmpty()) {
+                displayName.append(" [");
+                String separator = "";
+                for (GradleConfiguration ext : conf.getExtendsFrom()) {
+                    displayName.append(separator);
+                    displayName.append(ext.getName());
+                    separator = ", ";
+                }
+                displayName.append(']');
+            }
+            setDisplayName(displayName.toString());
+            setIconBaseWithExtension(conf.isCanBeResolved() ? LIBRARIES_ICON : UNRESOLVED_ICON);
+        }
+
+        @Override
+        @Messages({
+            "LBL_name=Name",
+            "LBL_description=Description",
+            "LBL_transitive=Transitive",
+            "LBL-canBeResolved=Can be Resolved"
+        })
+        protected Sheet createSheet() {
+            Sheet sheet = Sheet.createDefault();
+            Sheet.Set set = Sheet.createPropertiesSet();
+            GradleConfiguration conf = getLookup().lookup(GradleConfiguration.class);
+
+            set.put(PropertySupport.readOnly("name", String.class, Bundle.LBL_name(), conf::getName));
+            set.put(PropertySupport.readOnly("description", String.class, Bundle.LBL_description(), conf::getDescription));
+            set.put(PropertySupport.readOnly("transitive", Boolean.class, Bundle.LBL_transitive(), conf::isTransitive));
+
+            set.put(PropertySupport.readOnly("canBeResolved", Boolean.class, Bundle.LBL_canBeResolved(), conf::isCanBeResolved));
+
+            sheet.put(set);
+
+            return sheet;
+        }
+    }
+    
     private static class ConfigurationChildren extends ChildFactory.Detachable<GradleDependency> implements PropertyChangeListener {
 
-        private final NbGradleProjectImpl project;
+        private final Project project;
         private final String configuration;
 
-        public ConfigurationChildren(NbGradleProjectImpl project, String configuration) {
+        public ConfigurationChildren(Project project, String configuration) {
             this.project = project;
             this.configuration = configuration;
         }
@@ -332,11 +363,11 @@ public class ConfigurationsNode extends AbstractNode {
 
     private static class ModuleFilterNode extends FilterNode implements ChangeListener {
 
-        private final NbGradleProjectImpl project;
+        private final Project project;
         private final GradleDependency.ModuleDependency module;
         private final DataObject mainJar;
 
-        public ModuleFilterNode(NbGradleProjectImpl project, GradleDependency.ModuleDependency module, DataObject mainJar) {
+        public ModuleFilterNode(Project project, GradleDependency.ModuleDependency module, DataObject mainJar) {
             super(mainJar.getNodeDelegate().cloneNode());
             this.project = project;
             this.module = module;
@@ -358,7 +389,7 @@ public class ConfigurationsNode extends AbstractNode {
                         ActionProviderImpl.COMMAND_DL_JAVADOC, Lookups.singleton(RunUtils.simpleReplaceTokenProvider(REQUESTED_COMPONENT, module.getId())));
                 actions.add(download);
             }
-            return actions.toArray(new Action[actions.size()]);
+            return actions.toArray(new Action[0]);
         }
 
         @Override
