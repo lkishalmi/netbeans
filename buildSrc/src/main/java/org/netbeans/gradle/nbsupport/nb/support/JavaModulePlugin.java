@@ -40,7 +40,6 @@ import org.gradle.api.attributes.Usage;
 import org.gradle.api.attributes.java.TargetJvmVersion;
 import org.gradle.api.file.CopySpec;
 import org.gradle.api.file.DuplicatesStrategy;
-import org.gradle.api.internal.tasks.TaskStateInternal;
 import org.gradle.api.java.archives.Attributes;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.JavaPlugin;
@@ -196,6 +195,45 @@ public class JavaModulePlugin implements Plugin<Project> {
             jar.getArchiveClassifier().set("test");
         });
         prj.getArtifacts().add("testApi", pvd);
+    }
+
+    private static void addDependency(Project prj, String targetConfiguration, NbModule.Dependency dependency) {
+        addDependency(prj, targetConfiguration, dependency, null);
+    }
+
+    private static void addDependency(Project prj, String targetConfiguration, NbModule.Dependency dependency, String sourceConfiguration) {
+        DependencyHandler dh = prj.getDependencies();
+        Project dprj = getProjectByCodeNameBase(prj, dependency.codeNameBase);
+        if (sourceConfiguration != null) {
+            dh.add(targetConfiguration, dh.project(Map.of("path", dprj.getPath(), "configuration", "runtimeElements")));
+        } else {
+            dh.add(targetConfiguration, dprj);
+        }
+    }
+
+    private static String dependencyKey(NbModule.Dependency dependency, String sourceConfiguration) {
+        return sourceConfiguration != null ? dependency.codeNameBase + ":" + sourceConfiguration : dependency.codeNameBase;
+    }
+
+    private static void addRecursiveDependency(Project prj, Set<String> visited, String targetConfiguration, NbModule.Dependency dependency, String sourceConfiguration) {
+        Project dprj = getProjectByCodeNameBase(prj, dependency.codeNameBase);
+        NbModule dmodule = dprj.getExtensions().getByType(NbProjectExtension.class).getModule();
+        for (String string : dependenc) {
+
+        }
+    }
+
+    private void prepareProcessorDependencies(Project prj, NbProjectExtension nbproject, NbBuildExtension nbbuild) {
+        NbModule module = nbproject.getModule();
+        if (!nbproject.isTestOnly()) {
+            for (NbModule.Dependency dep: module.dependencies.get(NbModule.DependencyType.MAIN)) {
+                if (dep.compileDependency) {
+                    continue;
+                }
+                addDependency(prj, "annotationProcessor", dep);
+                if (dep.)
+            }
+        }
     }
 
     private void prepareDependencies(Project prj) {

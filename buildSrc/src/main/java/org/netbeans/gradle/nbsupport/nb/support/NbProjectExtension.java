@@ -285,9 +285,14 @@ public final class NbProjectExtension implements ModuleFinder {
                     case "module-dependencies":
                         Set<NbModule.Dependency> main = new LinkedHashSet<>();
                         processDependencies(events, main, "module-dependencies", "dependency");
+                        dependencies.put(NbModule.DependencyType.MAIN, main);
                         break;
                     case "test-dependencies":
-                        processTestDependencies(events, dependencies);
+                        Set<NbModule.Dependency> unit = new LinkedHashSet<>();
+                        Set<NbModule.Dependency> qa = new LinkedHashSet<>();
+                        processTestDependencies(events, unit, qa);
+                        dependencies.put(NbModule.DependencyType.TEST_UNIT, unit);
+                        dependencies.put(NbModule.DependencyType.TEST_FUNCTIONAL, qa);
                         break;
                     case "class-path-extension":
                         String relPath = null;
@@ -345,11 +350,10 @@ public final class NbProjectExtension implements ModuleFinder {
             }
             if (evt.isEndElement() && "data".equals(evt.asEndElement().getName().getLocalPart())) break;
         }
-        return new NbModule(codeNameBase, cpExtension, publicPackages, friendPackages, friendModules, directDependencies);
+        return new NbModule(codeNameBase, cpExtension, publicPackages, friendPackages, friendModules, dependencies);
     }
 
-    private static Map<String, Set<NbModule.Dependency>> processTestDependencies(XMLEventReader events) throws XMLStreamException {
-        Map<String, Set<NbModule.Dependency>> ret = new HashMap<>();
+    private static void processTestDependencies(XMLEventReader events, Set<NbModule.Dependency> unitDeps, Set<NbModule.Dependency> qaDeps) throws XMLStreamException {
         while(events.hasNext()) {
             XMLEvent evt = events.nextEvent();
             if (evt.isStartElement()) {
@@ -357,16 +361,16 @@ public final class NbProjectExtension implements ModuleFinder {
                 String tag = element.getName().getLocalPart();
                 if (tag.equals("name")) {
                     String testType = events.getElementText();
-                    Set<NbModule.Dependency> deps = processDependencies(events, "test-type", "test-dependency");
-                    if (!"unit".equals(testType)) {
-                        System.out.println("Test Type: " + testType);
+                    if ("unit".equals(testType)) {
+                        processDependencies(events, unitDeps, "test-type", "test-dependency");
                     }
-                    ret.put(testType, deps);
+                    if ("qa-functional".equals(testType)){
+                        processDependencies(events, qaDeps, "test-type", "test-dependency");
+                    }
                 }
             }
             if (evt.isEndElement() && "test-dependencies".equals(evt.asEndElement().getName().getLocalPart())) break;
         }
-        return ret;
     }
 
     private static void processDependencies(XMLEventReader events, Set<NbModule.Dependency> dependencies, String endTag, String dependencyTag) throws XMLStreamException {
