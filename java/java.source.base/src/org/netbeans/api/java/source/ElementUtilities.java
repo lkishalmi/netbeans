@@ -217,7 +217,7 @@ public final class ElementUtilities {
      * @see Elements#getAllMembers
      */
     public Iterable<? extends Element> getMembers(TypeMirror type, ElementAcceptor acceptor) {
-        ArrayList<Element> members = new ArrayList<Element>();
+        Map<String,List<Element>> members = new HashMap<>();
         if (type != null) {
             Elements elements = JavacElements.instance(ctx);
             Types types = JavacTypes.instance(ctx);
@@ -229,18 +229,17 @@ public final class ElementUtilities {
                     if (te == null) break;
                     for (Element member : elements.getAllMembers(te)) {
                         if (acceptor == null || acceptor.accept(member, type)) {
-                            if (!isHidden(member, members, elements, types))
-                                members.add(member);
+                            addIfNotHidden(member, members, member.getSimpleName().toString(), elements, types);
                         }
                     }
                     if (te.getKind().isClass() || te.getKind().isInterface() && SourceLevelUtils.allowDefaultMethods(Source.instance(ctx))) {
                         VarSymbol thisPseudoMember = new VarSymbol(Flags.FINAL | Flags.HASINIT, Names.instance(ctx)._this, (ClassType)te.asType(), (ClassSymbol)te);
                         if (acceptor == null || acceptor.accept(thisPseudoMember, type))
-                            members.add(thisPseudoMember);
+                            addAlways(thisPseudoMember, members, thisPseudoMember.getSimpleName().toString());
                         if (te.getSuperclass().getKind() == TypeKind.DECLARED) {
                             VarSymbol superPseudoMember = new VarSymbol(Flags.FINAL | Flags.HASINIT, Names.instance(ctx)._super, (ClassType)te.getSuperclass(), (ClassSymbol)te);
                             if (acceptor == null || acceptor.accept(superPseudoMember, type))
-                                members.add(superPseudoMember);
+                                addAlways(superPseudoMember, members, superPseudoMember.getSimpleName().toString());
                         }
                     }
                 case BOOLEAN:
@@ -257,23 +256,23 @@ public final class ElementUtilities {
                     t = new ClassType(t.getEnclosingType(), typeargs, t.tsym);
                     Element classPseudoMember = new VarSymbol(Flags.STATIC | Flags.PUBLIC | Flags.FINAL, Names.instance(ctx)._class, t, ((Type)type).tsym);
                     if (acceptor == null || acceptor.accept(classPseudoMember, type))
-                        members.add(classPseudoMember);
+                        addAlways(classPseudoMember, members, classPseudoMember.getSimpleName().toString());
                     break;
                 case ARRAY:
                     for (Element member : elements.getAllMembers((TypeElement)((Type)type).tsym)) {
                         if (acceptor == null || acceptor.accept(member, type))
-                            members.add(member);
+                            addAlways(member, members, member.getSimpleName().toString());
                     }
                     t = Symtab.instance(ctx).classType;
                     typeargs = com.sun.tools.javac.util.List.of((Type)type);
                     t = new ClassType(t.getEnclosingType(), typeargs, t.tsym);
                     classPseudoMember = new VarSymbol(Flags.STATIC | Flags.PUBLIC | Flags.FINAL, Names.instance(ctx)._class, t, ((Type)type).tsym);
                     if (acceptor == null || acceptor.accept(classPseudoMember, type))
-                        members.add(classPseudoMember);
+                        addAlways(classPseudoMember, members, classPseudoMember.getSimpleName().toString());
                     break;
             }
         }
-        return members;
+        return flattenMembers(members);
     }
     
     /**
@@ -372,6 +371,15 @@ public final class ElementUtilities {
             return true;
         }
     };
+
+    private void addAlways(Element local, Map<String, List<Element>> members, String name) {
+        List<Element> namedMembers = members.get(name);
+        if (namedMembers == null) {
+            namedMembers = new ArrayList<>();
+            members.put(name, namedMembers);
+        }
+        namedMembers.add(local);
+    }
     
     private void addIfNotHidden(Element local, Map<String, List<Element>> members, String name, Elements elements, Types types) {
         List<Element> namedMembers = members.get(name);
@@ -388,11 +396,18 @@ public final class ElementUtilities {
         }
         namedMembers.add(local);
     }
-    
+
+    static Iterable<? extends Element> flattenMembers(Map<String,List<Element>> members) {
+        ArrayList<Element> result = new ArrayList<Element>();
+        for (List<Element> list: members.values())
+            result.addAll(list);
+
+        return result;
+    }
     /**Return members declared in the given scope.
      */
     public Iterable<? extends Element> getLocalMembersAndVars(Scope scope, ElementAcceptor acceptor) {
-        ArrayList<Element> members = new ArrayList<Element>();
+        Map<String,List<Element>> members = new HashMap<>();
         Elements elements = JavacElements.instance(ctx);
         Types types = JavacTypes.instance(ctx);
         TypeElement cls;
@@ -400,51 +415,44 @@ public final class ElementUtilities {
             if ((cls = scope.getEnclosingClass()) != null) {
                 for (Element local : scope.getLocalElements()) {
                     if (acceptor == null || acceptor.accept(local, null)) {
-                        if (!isHidden(local, members, elements, types)) {
-                            members.add(local);
-                        }
+                        addIfNotHidden(local, members, local.getSimpleName().toString(), elements, types);
                     }
                 }
                 TypeMirror type = cls.asType();
                 for (Element member : elements.getAllMembers(cls)) {
                     if (acceptor == null || acceptor.accept(member, type)) {
-                        if (!isHidden(member, members, elements, types)) {
-                            members.add(member);
-                        }
+                        addIfNotHidden(member, members, member.getSimpleName().toString(), elements, types);
                     }
                 }
             } else {
                 for (Element local : scope.getLocalElements()) {
                     if (!local.getKind().isClass() && !local.getKind().isInterface() &&
                         (acceptor == null || local.getEnclosingElement() != null && acceptor.accept(local, local.getEnclosingElement().asType()))) {
-                        if (!isHidden(local, members, elements, types)) {
-                            members.add(local);
-                        }
+                        addIfNotHidden(local, members, local.getSimpleName().toString(), elements, types);
                     }
                 }
             }
             scope = scope.getEnclosingScope();
         }
-        return members;
+
+        return flattenMembers(members);
     }
 
     /**Return variables declared in the given scope.
      */
     public Iterable<? extends Element> getLocalVars(Scope scope, ElementAcceptor acceptor) {
-        ArrayList<Element> members = new ArrayList<Element>();
+        Map<String, List<Element>> members = new HashMap<>();
         Elements elements = JavacElements.instance(ctx);
         Types types = JavacTypes.instance(ctx);
         while(scope != null && scope.getEnclosingClass() != null) {
             for (Element local : scope.getLocalElements()) {
                 if (acceptor == null || acceptor.accept(local, null)) {
-                    if (!isHidden(local, members, elements, types)) {
-                        members.add(local);
-                    }
+                    addIfNotHidden(local, members, local.getSimpleName().toString(), elements, types);
                 }
             }
             scope = scope.getEnclosingScope();
         }
-        return members;
+        return flattenMembers(members);
     }
     
     /**Return {@link TypeElement}s:
@@ -455,7 +463,7 @@ public final class ElementUtilities {
      * </ul>
      */
     public Iterable<? extends TypeElement> getGlobalTypes(ElementAcceptor acceptor) {
-        ArrayList<TypeElement> members = new ArrayList<TypeElement>();
+        Map<String,List<Element>> members = new HashMap<>();
         Trees trees = JavacTrees.instance(ctx);
         Elements elements = JavacElements.instance(ctx);
         Types types = JavacTypes.instance(ctx);
@@ -465,10 +473,8 @@ public final class ElementUtilities {
             while (scope != null && scope instanceof JavacScope && !((JavacScope)scope).isStarImportScope()) {
                 for (Element local : scope.getLocalElements()) {
                     if (local.getKind().isClass() || local.getKind().isInterface()) {
-                        if (!isHidden(local, members, elements, types)) {
-                            if (acceptor == null || acceptor.accept(local, null))
-                                members.add((TypeElement)local);
-                        }
+                        if (acceptor == null || acceptor.accept(local, null))
+                            addIfNotHidden(local, members, local.getSimpleName().toString(), elements, types);
                     }
                 }
                 scope = scope.getEnclosingScope();
@@ -476,25 +482,21 @@ public final class ElementUtilities {
             Element element = trees.getElement(path);
             if (element != null && element.getKind() == ElementKind.PACKAGE) {
                 for (Element member : element.getEnclosedElements()) {
-                    if (!isHidden(member, members, elements, types)) {
-                        if (acceptor == null || acceptor.accept(member, null))
-                            members.add((TypeElement) member);
-                    }
+                    if (acceptor == null || acceptor.accept(member, null))
+                        addIfNotHidden(member, members, member.getSimpleName().toString(), elements, types);
                 }
             }
             while (scope != null) {
                 for (Element local : scope.getLocalElements()) {
                     if (local.getKind().isClass() || local.getKind().isInterface()) {
-                        if (!isHidden(local, members, elements, types)) {
-                            if (acceptor == null || acceptor.accept(local, null))
-                                members.add((TypeElement)local);
-                        }
+                        if (acceptor == null || acceptor.accept(local, null))
+                            addIfNotHidden(local, members, local.getSimpleName().toString(), elements, types);
                     }
                 }
                 scope = scope.getEnclosingScope();
             }
         }
-        return members;
+        return (Iterable<TypeElement>)flattenMembers(members);
     }
 
     /**Filter {@link Element}s
@@ -514,21 +516,19 @@ public final class ElementUtilities {
             Element hider = it.next();
             if (hider == member)
                 return true;
-            if (hider.getSimpleName().contentEquals(member.getSimpleName())) {
-                if (elements.hides(member, hider)) {
-                    it.remove();
-                } else {
-                    if (member instanceof VariableElement && hider instanceof VariableElement
-                            && (!member.getKind().isField() || hider.getKind().isField()))
+            if (elements.hides(member, hider)) {
+                it.remove();
+            } else {
+                if (member instanceof VariableElement && hider instanceof VariableElement
+                        && (!member.getKind().isField() || hider.getKind().isField()))
+                    return true;
+                TypeMirror memberType = member.asType();
+                TypeMirror hiderType = hider.asType();
+                if (memberType.getKind() == TypeKind.EXECUTABLE && hiderType.getKind() == TypeKind.EXECUTABLE) {
+                    if (types.isSubsignature((ExecutableType)hiderType, (ExecutableType)memberType))
                         return true;
-                    TypeMirror memberType = member.asType();
-                    TypeMirror hiderType = hider.asType();
-                    if (memberType.getKind() == TypeKind.EXECUTABLE && hiderType.getKind() == TypeKind.EXECUTABLE) {
-                        if (types.isSubsignature((ExecutableType)hiderType, (ExecutableType)memberType))
-                            return true;
-                    } else {
-                        return false;
-                    }
+                } else {
+                    return false;
                 }
             }
         }
