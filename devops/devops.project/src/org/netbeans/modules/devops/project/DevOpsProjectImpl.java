@@ -59,6 +59,13 @@ public class DevOpsProjectImpl implements Project {
     private final RequestProcessor.Task reloadTask = RELOAD_RP.create(this::reloadProjectData);
 
     public static ProjectAccessor ACCESSOR = null;    
+    static {
+        // that will assign value to the ACCESSOR field above
+        try {
+            Class.forName(DevOpsProject.class.getName(), true, DevOpsProjectImpl.class.getClassLoader());
+        } catch (ClassNotFoundException ex) {
+        }
+    }
     
     public abstract static class ProjectAccessor {
 
@@ -88,14 +95,15 @@ public class DevOpsProjectImpl implements Project {
         this.projectIconBase = projectIconBase;
         this.fileSupplier = fileSupplier != null ? fileSupplier : Collections::emptySet;
         this.apiProject = ACCESSOR.createApiProject(this);
-        this.lookup = LookupProviderSupport.createCompositeLookup(
-                createLookup(state),
-                new ProxyLookup(
-                    new AbstractLookup(projectData),
-                    Lookups.forPath("Projects/" + projectType + "/Lookup"), //NOI18N
-                    Lookups.forPath("Projects/" + DevOpsProject.PROJECT_TYPE + "/Lookup") //NOI18N
-                )
-        );
+        this.lookup = new ProxyLookup(
+                new AbstractLookup(projectData),
+                LookupProviderSupport.createCompositeLookup(
+                    createLookup(state),
+                    new ProxyLookup(
+                        Lookups.forPath("Projects/" + projectType + "/Lookup"), //NOI18N
+                        Lookups.forPath("Projects/" + DevOpsProject.PROJECT_TYPE + "/Lookup") //NOI18N
+                    )
+                ));
     }
     
 
@@ -178,13 +186,13 @@ public class DevOpsProjectImpl implements Project {
             data.addAll(loader.loadProjectData());
         }
         projectData.set(data, null);
+        ACCESSOR.doFireReload(apiProject);
     }
     
     void attachAllUpdater() {
         synchronized (this) {
             if (openedProjectUpdater == null) {
                 openedProjectUpdater = new Updater();
-                openedProjectUpdater.attachAll();
             }
         }
 

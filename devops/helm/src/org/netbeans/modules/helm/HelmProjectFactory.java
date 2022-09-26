@@ -19,6 +19,7 @@
 package org.netbeans.modules.helm;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.Set;
 import org.netbeans.api.annotations.common.StaticResource;
 import org.netbeans.modules.devops.project.spi.DevOpsProjectFactory;
@@ -29,6 +30,7 @@ import org.openide.awt.ActionReferences;
 import org.openide.filesystems.FileObject;
 import org.openide.util.lookup.ServiceProvider;
 import static org.netbeans.modules.helm.HelmProjectFactory.PROJECT_TYPE;
+import org.openide.filesystems.FileUtil;
 
 @ActionReferences({/*
                 <file name="org-netbeans-modules-project-ui-NewFile$WithSubMenu.shadow">
@@ -166,7 +168,8 @@ public final class HelmProjectFactory extends DevOpsProjectFactory {
 
     @Override
     protected Set<File> getProjectFiles(FileObject projectDirectory) {
-        return super.getProjectFiles(projectDirectory); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/OverriddenMethodBody
+        return Collections.singleton(FileUtil.toFile(projectDirectory.getFileObject("Chart.yaml")));
+                
     }
 
     

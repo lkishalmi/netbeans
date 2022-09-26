@@ -55,7 +55,7 @@ public class DevOpsProjectNode extends AbstractNode {
 
     @Override
     public String getShortDescription() {
-        return null;
+        return getName();
     }
 
     @Override
