@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.netbeans.modules.languages.terraform.tfvars;
+package org.netbeans.modules.languages.terraform.tf;
 
 import java.util.Collection;
 import java.util.EnumSet;
@@ -42,82 +42,82 @@ import org.openide.windows.TopComponent;
  * @author lkishalmi
  */
 @NbBundle.Messages(
-        "TFVarsResolver=Terraform Variables"
+        "TFResolver=Terraform Resources"
 )
-@MIMEResolver.ExtensionRegistration(displayName = "#TFVarsResolver",
-        extension = "tfvars",
-        mimeType = TFVarsLanguage.MIME_TYPE,
-        position = 304
+@MIMEResolver.ExtensionRegistration(displayName = "#TFResolver",
+        extension = "tf",
+        mimeType = TFLanguage.MIME_TYPE,
+        position = 305
 )
 
 @ActionReferences({
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "System", id = "org.openide.actions.OpenAction"),
             position = 100,
             separatorAfter = 200
     ),
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "Edit", id = "org.openide.actions.CutAction"),
             position = 300
     ),
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "Edit", id = "org.openide.actions.CopyAction"),
             position = 400
     ),
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "Edit", id = "org.openide.actions.PasteAction"),
             position = 500,
             separatorAfter = 600
     ),
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "Edit", id = "org.openide.actions.DeleteAction"),
             position = 700
     ),
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "System", id = "org.openide.actions.RenameAction"),
             position = 800,
             separatorAfter = 900
     ),
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "System", id = "org.openide.actions.SaveAsTemplateAction"),
             position = 1000,
             separatorAfter = 1100
     ),
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "System", id = "org.openide.actions.FileSystemAction"),
             position = 1200,
             separatorAfter = 1300
     ),
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "System", id = "org.openide.actions.ToolsAction"),
             position = 1400
     ),
     @ActionReference(
-            path = "Loaders/text/x-hcl-tfvars/Actions",
+            path = "Loaders/text/x-hcl-tf/Actions",
             id = @ActionID(category = "System", id = "org.openide.actions.PropertiesAction"),
             position = 1500
     ),
     @ActionReference(
-            path = "Editors/text/x-hcl-tfvars/Popup",
+            path = "Editors/text/x-hcl-tf/Popup",
             id = @ActionID(category = "Refactoring", id = "org.netbeans.modules.refactoring.api.ui.WhereUsedAction"),
             position = 1600
     ),
 })
 
-@LanguageRegistration(mimeType = TFVarsLanguage.MIME_TYPE, useMultiview = true)
-public final class TFVarsLanguage extends DefaultLanguageConfig {
+@LanguageRegistration(mimeType = TFLanguage.MIME_TYPE, useMultiview = true)
+public final class TFLanguage extends DefaultLanguageConfig {
 
-    public static final String MIME_TYPE = "text/x-hcl-tfvars";
-
+    public static final String MIME_TYPE = "text/x-hcl-tf";
+    
     @Override
     public Language getLexerLanguage() {
         return language;
@@ -125,29 +125,18 @@ public final class TFVarsLanguage extends DefaultLanguageConfig {
 
     @Override
     public String getDisplayName() {
-        return Bundle.TFVarsResolver();
+        return Bundle.TFResolver();
     }
-
-    @Override
-    public String getPreferredExtension() {
-        return "tfvars";
-    }
-
-    @Override
-    public String getLineCommentPrefix() {
-        return "#"; // NOI18N
-    }
-
     private static final Language<HCLTokenId> language = new LanguageHierarchy<HCLTokenId>() {
 
             @Override
             protected String mimeType() {
-                return TFVarsLanguage.MIME_TYPE;
+                return TFLanguage.MIME_TYPE;
             }
 
             @Override
             protected Lexer<HCLTokenId> createLexer(LexerRestartInfo<HCLTokenId> info) {
-                return  new TFVarsLexer(info);
+                return  new TFLexer(info);
             }
 
             @Override
@@ -161,12 +150,13 @@ public final class TFVarsLanguage extends DefaultLanguageConfig {
     @MultiViewElement.Registration(
             displayName = "#Source",
             persistenceType = TopComponent.PERSISTENCE_ONLY_OPENED,
-            mimeType = TFVarsLanguage.MIME_TYPE,
-            preferredID = "tfvars.source",
+            mimeType = TFLanguage.MIME_TYPE,
+            preferredID = "tf.source",
             position = 100
     )
     public static MultiViewEditorElement createMultiViewEditorElement(Lookup context) {
         return new MultiViewEditorElement(context);
     }
 
+    
 }

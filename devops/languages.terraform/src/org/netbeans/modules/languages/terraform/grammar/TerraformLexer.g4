@@ -16,34 +16,109 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.netbeans.modules.languages.terraform.tfvars;
+lexer grammar TerraformLexer;
+import HCLCommonLexerRules;
 
-import org.netbeans.api.lexer.TokenId;
-
-/**
- *
- * @author lkishalmi
- */
-public enum TFVarsTokenId implements TokenId {
-
-    COMMENT("comment"),
-    ERROR("error"),
-    OPERATOR("operator"),
-    SEPARATOR("separator"),
-    STRING("string"),
-    VARIABLE("identifier"),
-    WHITESPACE("whitespace")
+BOOL
+    : 'bool'
     ;
 
-    private final String category;
+COUNT
+    : 'count'
+    ;
 
-    private TFVarsTokenId(String category) {
-        this.category = category;
-    }
+DATA
+    : 'data'
+    ;
+
+DEFAULT
+    : 'default'
+    ;
+
+DEPENDS_ON
+    : 'depends_on'
+    ;
+
+EACH
+    : 'each'
+    ;
+
+FOR_EACH
+    : 'for_each'
+    ;
+
+FOR
+    : 'for'
+    ;
+
+IN
+    : 'in'
+    ;
+
+LIFECYCLE
+    : 'lifecycle'
+    ;
+
+LOCALS
+    : 'locals'
+    ;
+
+LOCAL
+    : 'local'
+    ;
+
+MAP
+    : 'map'
+    ;
+
+MODULE
+    : 'module'
+    ;
+
+MOVED
+    : 'moved'
+    ;
+
+NUMBER
+    : 'number'
+    ;
+
+OBJECT
+    : 'object'
+    ;
+
+OPTIONAL
+    : 'optional'
+    ;
+
+OUTPUT
+    : 'output'
+    ;
+
+PROVIDER
+    : 'provider'
+    ;
+
+RESOURCE
+    : 'resource'
+    ;
+
+STRING
+    : 'string'
+    ;
     
-    @Override
-    public String primaryCategory() {
-        return category;
-    }
-    
-}
+TERRAFORM
+    : 'terraform'
+    ;
+
+TYPE
+    : 'type'
+    ;
+
+VARIABLE
+    : 'variable'
+    ;
+
+VAR
+    : 'var'
+    ;

@@ -18,60 +18,39 @@
  */
 package org.netbeans.modules.languages.terraform.tfvars;
 
-import static org.antlr.v4.runtime.Recognizer.EOF;
-import org.antlr.v4.runtime.misc.IntegerList;
-import org.netbeans.api.lexer.Token;
-import org.netbeans.modules.languages.terraform.LexerInputCharStream;
+import org.netbeans.modules.languages.terraform.AbstractHCLLexer;
+import org.netbeans.modules.languages.terraform.HCLTokenId;
 import org.netbeans.modules.languages.terraform.grammar.HCLCommonLexerRules;
-import org.netbeans.spi.lexer.Lexer;
 import org.netbeans.spi.lexer.LexerRestartInfo;
-import org.netbeans.spi.lexer.TokenFactory;
 
-import static org.netbeans.modules.languages.terraform.tfvars.TFVarsTokenId.*;
+import static org.netbeans.modules.languages.terraform.HCLTokenId.*;
 
 /**
  *
  * @author lkishalmi
  */
-public final class TFVarsLexer implements Lexer<TFVarsTokenId> {
+public final class TFVarsLexer extends AbstractHCLLexer {
 
-    private final TokenFactory<TFVarsTokenId> tokenFactory;
-    protected final org.antlr.v4.runtime.Lexer lexer;
-    private final LexerInputCharStream input;
-
-    public TFVarsLexer(LexerRestartInfo<TFVarsTokenId> info) {
-        this.tokenFactory = info.tokenFactory();
-        this.input = new LexerInputCharStream(info.input());
-        this.lexer = new HCLCommonLexerRules(input);
-        if (info.state() != null) {
-            ((LexerState) info.state()).restore(lexer);
-        }
-        input.markToken();
+    public TFVarsLexer(LexerRestartInfo<HCLTokenId> info) {
+        super(info, (input) -> new HCLCommonLexerRules(input));
     }
-
-    private org.antlr.v4.runtime.Token preFetchedToken = null;
-
+    
     @Override
-    public Token<TFVarsTokenId> nextToken() {
-        org.antlr.v4.runtime.Token nextToken;
-        if (preFetchedToken != null) {
-            nextToken = preFetchedToken;
-            lexer.getInputStream().seek(preFetchedToken.getStopIndex() + 1);
-            preFetchedToken = null;
-        } else {
-            nextToken = lexer.nextToken();
-        }
-        if (nextToken.getType() == EOF) {
-            return null;
-        }
-        switch (nextToken.getType()) {
+    protected HCLTokenId mapTokenType(int type) {
+        switch (type) {
             case HCLCommonLexerRules.LINE_COMMENT:
-            case HCLCommonLexerRules.COMMENT:
-                return token(COMMENT);
-                
+            case HCLCommonLexerRules.BLOCK_COMMENT:
+                return COMMENT;
+
+            case HCLCommonLexerRules.A_BOOL:
+                return BOOLEAN;
+
+            case HCLCommonLexerRules.A_NUMBER:
+                return NUMBER;
+
             case HCLCommonLexerRules.IDENTIFIER:
-                return token(VARIABLE);
-                
+                return VARIABLE;
+
             case HCLCommonLexerRules.LBRACE:
             case HCLCommonLexerRules.RBRACE:
             case HCLCommonLexerRules.LBRACK:
@@ -79,67 +58,28 @@ public final class TFVarsLexer implements Lexer<TFVarsTokenId> {
             case HCLCommonLexerRules.COMMA:
             case HCLCommonLexerRules.DOT:
             case HCLCommonLexerRules.EQUAL:
-                return token(SEPARATOR);
-                
-            case HCLCommonLexerRules.STRING_CONTENT:
-                preFetchedToken = lexer.nextToken();
-                while (preFetchedToken.getType() == HCLCommonLexerRules.STRING_CONTENT) {
-                    preFetchedToken = lexer.nextToken();
-                }
-                lexer.getInputStream().seek(preFetchedToken.getStartIndex());
-                return token(STRING);
-                
+                return SEPARATOR;
+
             case HCLCommonLexerRules.QUOTE:
-            case HCLCommonLexerRules.STRING_END:
             case HCLCommonLexerRules.HEREDOC:
-                return token(STRING);
-                
+                return STRING;
+
             case HCLCommonLexerRules.WS:
             case HCLCommonLexerRules.NL:
-                return token(WHITESPACE);
-                
+                return WHITESPACE;
+
             default:
-                return token(ERROR);
+                return ERROR;
         }
     }
-
     @Override
-    public Object state() {
-        return new LexerState(lexer);
-    }
-
-    @Override
-    public void release() {
-    }
-
-    protected final Token<TFVarsTokenId> token(TFVarsTokenId id) {
-        input.markToken();
-        return tokenFactory.createToken(id);
-    }
-
-    private static class LexerState {
-        final int state;
-        final int mode;
-        final IntegerList modes;
-
-        LexerState(org.antlr.v4.runtime.Lexer lexer) {
-            this.state= lexer.getState();
-
-            this.mode = lexer._mode;
-            this.modes = new IntegerList(lexer._modeStack);
+    protected HCLTokenId collateTokenType(int type) {
+        switch (type) {
+            case HCLCommonLexerRules.STRING_CONTENT:
+                return STRING;
+            default:
+                return null;
         }
-
-        public void restore(org.antlr.v4.runtime.Lexer lexer) {
-            lexer.setState(state);
-            lexer._modeStack.addAll(modes);
-            lexer._mode = mode;
-        }
-
-        @Override
-        public String toString() {
-            return String.valueOf(state);
-        }
-
     }
-    
+
 }

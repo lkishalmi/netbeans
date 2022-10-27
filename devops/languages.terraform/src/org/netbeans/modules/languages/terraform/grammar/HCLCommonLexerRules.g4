@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 lexer grammar HCLCommonLexerRules;
 import HCLLexerBasics;
 
@@ -24,9 +42,23 @@ import HCLLexerBasics;
   }
 }
 
+channels { OFF_CHANNEL , COMMENT }
+
+BLOCK_COMMENT
+    : BlockComment -> channel(COMMENT)
+    ;
+
+LINE_COMMENT
+    : LineComment -> channel(COMMENT)
+    ;
+
 HEREDOC
- : '<<' '-'? Letter LetterDigit* NL ( {!heredocEndAhead(getText())}? . )* Letter LetterDigit*
+ : HereDocIntro Letter LetterDigit* NL ( {!heredocEndAhead(getText())}? . )* Letter LetterDigit*
  ;
+
+EQUALS
+   : Equal Equal
+   ;
 
 EQUAL
    : Equal
@@ -48,6 +80,46 @@ RBRACK
    : RBrack
    ;
 
+LPAREN
+   : LParen
+   ;
+
+RPAREN
+   : RParen
+   ;
+
+QUESTION
+   : Question
+   ;
+
+COLON
+   : Colon
+   ;
+
+GTE
+   : Gt Equal
+   ;
+
+GT
+   : Gt
+   ;
+
+LTE
+   : Lt Equal
+   ;
+
+LT
+   : Lt
+   ;
+
+NOT_EQUALS
+   : Bang Equal
+   ;
+
+NOT
+   : Bang
+   ;
+
 COMMA
    : Comma
    ;
@@ -65,7 +137,7 @@ MINUS
    : Minus
    ;
 
-BOOL
+A_BOOL
     : BoolLiteral
     ;
 
@@ -82,8 +154,8 @@ QUOTE
     : DQuote  -> pushMode(String)
     ;
 
-NUMBER
-   : Minus? DecimalNumeral (Dot DecDigit +)?
+A_NUMBER
+   : Minus? DecimalNumeral (Dot DecDigit+)?
    ;
 
 
@@ -95,13 +167,9 @@ NL
     : Vws +
     ;
 
-COMMENT
-    : BlockComment -> skip
-    ;
-
-LINE_COMMENT
-    : LineComment -> skip
-    ;
+ERRCHAR
+   : . -> channel (HIDDEN)
+   ;
 
 
 mode String;
@@ -115,14 +183,18 @@ INTERPOLATION_ESCAPE
    ;
 
 INTERPOLATION_START
-    : '${'      -> pushMode(Interpolation)
+    : InterpolationStart -> type(INTERPOLATION), pushMode(Interpolation)
     ;
 
 STRING_END
-    : '"'       -> popMode
+    : DQuote       -> type(QUOTE), popMode
     ;
 
 STRING_CONTENT
+    : NonVws
+    ;
+
+STRING_ERR
    : .
    ;
 
@@ -130,13 +202,13 @@ STRING_CONTENT
 mode Interpolation;
 
 INTERPOLATION_END
-    : '}'       -> popMode
+    : RBrace       -> type(INTERPOLATION), popMode
     ;
 
 INTERPOLATION_QUOTE
-    : '"'       -> pushMode(String)
+    : DQuote       -> type(QUOTE), pushMode(String)
     ;
 
-INTERPOLATION_CODE
+INTERPOLATION
     : .
     ;

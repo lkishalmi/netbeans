@@ -17,7 +17,7 @@
  * under the License.
  */
 
-grammar TFVarsGrammar;
+parser grammar TFVarsGrammar;
 
 options { tokenVocab = HCLCommonLexerRules; }
 
@@ -52,13 +52,13 @@ tfvars
     ;
 
 assignment
-    : IDENTIFIER '=' value NL
+    : IDENTIFIER EQUAL value
     ;
 
 
 value
-    : NUMBER
-    | BOOL
+    : A_NUMBER
+    | A_BOOL
     | NULL
     | HEREDOC
     | object
@@ -66,12 +66,12 @@ value
     ;
 
 object
-    : '{' assignment*? '}'
-    | '{' '}'
+    : LBRACE assignment*? RBRACE
+    | LBRACE RBRACE
     ;
 
 
 array
-    : '[' value (',' value)* ']'
-    | '[' ']'
+    : LBRACK value (COMMA value)* RBRACK
+    | LBRACK RBRACK
     ;

@@ -124,7 +124,7 @@ public class LexerInputCharStream implements CharStream {
 
     @Override
     public int size() {
-        throw new UnsupportedOperationException("Stream size is unknown.");
+        return -1;
     }
 
     @Override

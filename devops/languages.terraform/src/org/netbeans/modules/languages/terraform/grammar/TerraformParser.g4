@@ -16,7 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-lexer grammar HCLLexerBasics;
+parser grammar TerraformParser;
+options { tokenVocab = TerraformLexer; }
 
 @header {
 /*
@@ -43,176 +44,39 @@ lexer grammar HCLLexerBasics;
 package org.netbeans.modules.languages.terraform.grammar;
 }
 
-fragment Ws
-   : Hws
-   | Vws
-   ;
-
-fragment Hws
-   : [ \t]
-   ;
-
-fragment Vws
-   : [\r\n\f]
-   ;
-
-fragment NonVws
-   : ~[\r\n\f]
-   ;
-
-fragment BlockComment
-   : '/*' .*? ('*/' | EOF)
-   ;
-
-fragment LineComment
-   : '#' ~ [\r\n]*
-   | '//' ~ [\r\n]*
-   ;
-
-fragment Letter
-    : [a-zA-Z\-_]
+tfFile
+    : (localDef)* EOF
     ;
 
-fragment LetterDigit
-    : Letter
-    | [0-9]
+localDef
+    : LOCALS localBlock
     ;
 
-fragment HereDocIntro
-    : '<<' '-'?
+localBlock
+    : LBRACE assignment* RBRACE
+    | LBRACE RBRACE
     ;
 
-fragment DecimalNumeral
-   : '0'
-   | [1-9] DecDigit*
-   ;
-
-
-fragment DecDigit
-   : [0-9]
-   ;
-
-fragment NewLine
-    : '\r'? '\n'
+assignment
+    : IDENTIFIER EQUAL value
     ;
 
-fragment Esc
-   : '\\'
-   ;
+value
+    : A_NUMBER
+    | A_BOOL
+    | NULL
+    | HEREDOC
+    | object
+    | array
+    ;
 
-fragment HexDigit
-   : [0-9a-fA-F]
-   ;
+object
+    : LBRACE assignment*? RBRACE
+    | LBRACE RBRACE
+    ;
 
-fragment EscSeq
-   : Esc ([btnfr"\\] | UnicodeEsc | . | EOF)
-   ;
 
-fragment EscAny
-   : Esc .
-   ;
-
-fragment InterpolationStart
-   : '${'
-   ;
-
-fragment EscInterpolation
-   : '$${'
-   ;
-
-fragment UnicodeEsc
-   : 'u' (HexDigit (HexDigit (HexDigit HexDigit?)?)?)?
-   ;
-
-fragment BoolLiteral
-   : 'true'
-   | 'false'
-   ;
-
-fragment Null
-   : 'null'
-   ;
-
-fragment Colon
-   : ':'
-   ;
-
-fragment DQuote
-   : '"'
-   ;
-
-fragment LParen
-   : '('
-   ;
-
-fragment RParen
-   : ')'
-   ;
-
-fragment LBrace
-   : '{'
-   ;
-
-fragment RBrace
-   : '}'
-   ;
-
-fragment LBrack
-   : '['
-   ;
-
-fragment RBrack
-   : ']'
-   ;
-
-fragment RArrow
-   : '->'
-   ;
-
-fragment Lt
-   : '<'
-   ;
-
-fragment Gt
-   : '>'
-   ;
-
-fragment Equal
-   : '='
-   ;
-
-fragment Question
-   : '?'
-   ;
-
-fragment Star
-   : '*'
-   ;
-
-fragment Minus
-   : '-'
-   ;
-
-fragment Plus
-   : '+'
-   ;
-
-fragment Underscore
-   : '_'
-   ;
-
-fragment Dollar
-   : '$'
-   ;
-
-fragment Comma
-   : ','
-   ;
-
-fragment Dot
-   : '.'
-   ;
-
-fragment Bang
-   : '!'
-   ;
+array
+    : LBRACK value (COMMA value)* RBRACK
+    | LBRACK RBRACK
+    ;
