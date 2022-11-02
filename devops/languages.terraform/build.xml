@@ -39,6 +39,7 @@
             <arg value="HCLCommonLexerRules.g4"/>
             <arg value="TFVarsGrammar.g4"/>
             <arg value="TerraformLexer.g4"/>
+            <arg value="TerraformParser.g4"/>
         </java>
 
         <delete dir="${grammar.outdir}" includes="*.tokens"/>

@@ -38,14 +38,9 @@ public class TFLexer extends AbstractHCLLexer {
     protected HCLTokenId mapTokenType(int type) {
         switch (type) {
             case TerraformLexer.BOOL:
-            case TerraformLexer.COUNT:
             case TerraformLexer.DATA:
-            case TerraformLexer.DEFAULT:
-            case TerraformLexer.EACH:
             case TerraformLexer.FOR:
-            case TerraformLexer.FOR_EACH:
             case TerraformLexer.IN:
-            case TerraformLexer.LIFECYCLE:
             case TerraformLexer.LOCAL:
             case TerraformLexer.LOCALS:
             case TerraformLexer.MODULE:
@@ -53,7 +48,6 @@ public class TFLexer extends AbstractHCLLexer {
             case TerraformLexer.OUTPUT:
             case TerraformLexer.PROVIDER:
             case TerraformLexer.RESOURCE:
-            case TerraformLexer.TYPE:
             case TerraformLexer.TERRAFORM:
             case TerraformLexer.VAR:
             case TerraformLexer.VARIABLE:

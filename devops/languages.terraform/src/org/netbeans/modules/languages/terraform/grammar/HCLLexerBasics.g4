@@ -44,30 +44,30 @@ package org.netbeans.modules.languages.terraform.grammar;
 }
 
 fragment Ws
-   : Hws
-   | Vws
-   ;
+    : Hws
+    | Vws
+    ;
 
 fragment Hws
-   : [ \t]
-   ;
+    : [ \t]
+    ;
 
 fragment Vws
-   : [\r\n\f]
-   ;
+    : [\r\n\f]
+    ;
 
 fragment NonVws
-   : ~[\r\n\f]
-   ;
+    : ~[\r\n\f]
+    ;
 
 fragment BlockComment
-   : '/*' .*? ('*/' | EOF)
-   ;
+    : '/*' .*? ('*/' | EOF)
+    ;
 
 fragment LineComment
-   : '#' ~ [\r\n]*
-   | '//' ~ [\r\n]*
-   ;
+    : '#' ~ [\r\n]*
+    | '//' ~ [\r\n]*
+    ;
 
 fragment Letter
     : [a-zA-Z\-_]
@@ -83,136 +83,152 @@ fragment HereDocIntro
     ;
 
 fragment DecimalNumeral
-   : '0'
-   | [1-9] DecDigit*
-   ;
+    : '0'
+    | [1-9] DecDigit*
+    ;
 
 
 fragment DecDigit
-   : [0-9]
-   ;
+    : [0-9]
+    ;
 
 fragment NewLine
     : '\r'? '\n'
     ;
 
 fragment Esc
-   : '\\'
-   ;
+    : '\\'
+    ;
 
 fragment HexDigit
-   : [0-9a-fA-F]
-   ;
+    : [0-9a-fA-F]
+    ;
 
 fragment EscSeq
-   : Esc ([btnfr"\\] | UnicodeEsc | . | EOF)
-   ;
+    : Esc ([btnfr"\\] | UnicodeEsc | . | EOF)
+    ;
 
 fragment EscAny
-   : Esc .
-   ;
+    : Esc .
+    ;
 
 fragment InterpolationStart
-   : '${'
-   ;
+    : '${'
+    ;
 
 fragment EscInterpolation
-   : '$${'
-   ;
+    : '$${'
+    ;
 
 fragment UnicodeEsc
-   : 'u' (HexDigit (HexDigit (HexDigit HexDigit?)?)?)?
-   ;
+    : 'u' (HexDigit (HexDigit (HexDigit HexDigit?)?)?)?
+    ;
 
 fragment BoolLiteral
-   : 'true'
-   | 'false'
-   ;
+    : 'true'
+    | 'false'
+    ;
 
 fragment Null
-   : 'null'
-   ;
+    : 'null'
+    ;
 
 fragment Colon
-   : ':'
-   ;
+    : ':'
+    ;
 
 fragment DQuote
-   : '"'
-   ;
+    : '"'
+    ;
 
 fragment LParen
-   : '('
-   ;
+    : '('
+    ;
 
 fragment RParen
-   : ')'
-   ;
+    : ')'
+    ;
 
 fragment LBrace
-   : '{'
-   ;
+    : '{'
+    ;
 
 fragment RBrace
-   : '}'
-   ;
+    : '}'
+    ;
 
 fragment LBrack
-   : '['
-   ;
+    : '['
+    ;
 
 fragment RBrack
-   : ']'
-   ;
+    : ']'
+    ;
 
 fragment RArrow
-   : '->'
-   ;
+    : '=>'
+    ;
 
 fragment Lt
-   : '<'
-   ;
+    : '<'
+    ;
 
 fragment Gt
-   : '>'
-   ;
+    : '>'
+    ;
 
 fragment Equal
-   : '='
-   ;
+    : '='
+    ;
 
 fragment Question
-   : '?'
-   ;
+    : '?'
+    ;
 
 fragment Star
-   : '*'
-   ;
+    : '*'
+    ;
+
+fragment Slash
+    : '/'
+    ;
 
 fragment Minus
-   : '-'
-   ;
+    : '-'
+    ;
 
 fragment Plus
-   : '+'
-   ;
+    : '+'
+    ;
 
 fragment Underscore
-   : '_'
-   ;
+    : '_'
+    ;
 
 fragment Dollar
-   : '$'
-   ;
+    : '$'
+    ;
 
 fragment Comma
-   : ','
-   ;
+    : ','
+    ;
 
 fragment Dot
-   : '.'
-   ;
+    : '.'
+    ;
 
 fragment Bang
-   : '!'
-   ;
+    : '!'
+    ;
+
+fragment Ellipsis
+    : '...'
+    ;
+    
+fragment Or
+    : '||'
+    ;
+
+fragment And
+    : '&&'
+    ;

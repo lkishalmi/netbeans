@@ -23,9 +23,11 @@ import java.util.EnumSet;
 import org.netbeans.api.lexer.Language;
 import org.netbeans.core.spi.multiview.MultiViewElement;
 import org.netbeans.core.spi.multiview.text.MultiViewEditorElement;
+import org.netbeans.modules.csl.api.StructureScanner;
 import org.netbeans.modules.csl.spi.DefaultLanguageConfig;
 import org.netbeans.modules.csl.spi.LanguageRegistration;
 import org.netbeans.modules.languages.terraform.HCLTokenId;
+import org.netbeans.modules.parsing.spi.Parser;
 import org.netbeans.spi.lexer.LanguageHierarchy;
 import org.netbeans.spi.lexer.Lexer;
 import org.netbeans.spi.lexer.LexerRestartInfo;
@@ -127,6 +129,23 @@ public final class TFLanguage extends DefaultLanguageConfig {
     public String getDisplayName() {
         return Bundle.TFResolver();
     }
+
+    @Override
+    public Parser getParser() {
+        return new TFParser();
+    }
+
+    @Override
+    public StructureScanner getStructureScanner() {
+        return new TFStructureScanner();
+    }
+
+    @Override
+    public boolean hasStructureScanner() {
+        return true;
+    }
+
+
     private static final Language<HCLTokenId> language = new LanguageHierarchy<HCLTokenId>() {
 
             @Override
@@ -154,6 +173,7 @@ public final class TFLanguage extends DefaultLanguageConfig {
             preferredID = "tf.source",
             position = 100
     )
+
     public static MultiViewEditorElement createMultiViewEditorElement(Lookup context) {
         return new MultiViewEditorElement(context);
     }

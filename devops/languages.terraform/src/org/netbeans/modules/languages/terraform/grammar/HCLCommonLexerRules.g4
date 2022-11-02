@@ -60,6 +60,10 @@ EQUALS
    : Equal Equal
    ;
 
+RARROW
+   : RArrow
+   ;
+
 EQUAL
    : Equal
    ;
@@ -124,6 +128,10 @@ COMMA
    : Comma
    ;
 
+ELLIPSIS
+   : Ellipsis
+   ;
+
 DOT
    : Dot
    ;
@@ -132,10 +140,25 @@ PLUS
    : Plus
    ;
 
-
 MINUS
    : Minus
    ;
+
+STAR
+   : Star
+    ;
+
+SLASH
+   : Slash
+   ;
+
+AND
+    : And
+    ;
+
+OR
+    : Or
+    ;
 
 A_BOOL
     : BoolLiteral
@@ -160,11 +183,11 @@ A_NUMBER
 
 
 WS
-    : Hws +
+    : Hws + -> channel(OFF_CHANNEL)
     ;
 
 NL
-    : Vws +
+    : Vws + -> channel(OFF_CHANNEL)
     ;
 
 ERRCHAR
@@ -206,9 +229,36 @@ INTERPOLATION_END
     ;
 
 INTERPOLATION_QUOTE
-    : DQuote       -> type(QUOTE), pushMode(String)
+    : DQuote       -> type(INTERPOLATION), pushMode(InterpolationString)
     ;
 
 INTERPOLATION
     : .
     ;
+
+mode InterpolationString;
+
+ISTRING_ESCAPE
+   : EscAny -> type (INTERPOLATION)
+   ;
+
+IINTERPOLATION_ESCAPE
+   : EscInterpolation -> type(INTERPOLATION)
+   ;
+
+IINTERPOLATION_START
+    : InterpolationStart -> type(INTERPOLATION), pushMode(Interpolation)
+    ;
+
+ISTRING_END
+    : DQuote       -> type(INTERPOLATION), popMode
+    ;
+
+ISTRING_CONTENT
+    : NonVws       -> type(INTERPOLATION)
+    ;
+
+ISTRING_ERR
+   : .             -> type(ERRCHAR)
+   ;
+

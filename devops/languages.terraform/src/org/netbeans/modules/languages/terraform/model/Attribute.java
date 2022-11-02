@@ -16,89 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-lexer grammar TerraformLexer;
-import HCLCommonLexerRules;
+package org.netbeans.modules.languages.terraform.model;
 
-BOOL
-    : 'bool'
-    ;
-
-DATA
-    : 'data'
-    ;
-
-FOR
-    : 'for'
-    ;
-
-IF
-    : 'if'
-    ;
-
-IN
-    : 'in'
-    ;
-
-LIST
-    : 'list'
-    ;
-
-LOCALS
-    : 'locals'
-    ;
-
-LOCAL
-    : 'local'
-    ;
-
-MAP
-    : 'map'
-    ;
-
-MODULE
-    : 'module'
-    ;
-
-MOVED
-    : 'moved'
-    ;
-
-NUMBER
-    : 'number'
-    ;
-
-OBJECT
-    : 'object'
-    ;
-
-OPTIONAL
-    : 'optional'
-    ;
-
-OUTPUT
-    : 'output'
-    ;
-
-PROVIDER
-    : 'provider'
-    ;
-
-RESOURCE
-    : 'resource'
-    ;
-
-STRING
-    : 'string'
-    ;
-    
-TERRAFORM
-    : 'terraform'
-    ;
-
-VARIABLE
-    : 'variable'
-    ;
-
-VAR
-    : 'var'
-    ;
+/**
+ *
+ * @author lkishalmi
+ */
+public class Attribute {
+    public static final Attribute NONE = new Attribute();
+}

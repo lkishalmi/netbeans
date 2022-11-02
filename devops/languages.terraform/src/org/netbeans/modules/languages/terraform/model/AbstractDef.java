@@ -16,89 +16,28 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-lexer grammar TerraformLexer;
-import HCLCommonLexerRules;
+package org.netbeans.modules.languages.terraform.model;
 
-BOOL
-    : 'bool'
-    ;
+import java.util.HashMap;
+import java.util.Map;
 
-DATA
-    : 'data'
-    ;
-
-FOR
-    : 'for'
-    ;
-
-IF
-    : 'if'
-    ;
-
-IN
-    : 'in'
-    ;
-
-LIST
-    : 'list'
-    ;
-
-LOCALS
-    : 'locals'
-    ;
-
-LOCAL
-    : 'local'
-    ;
-
-MAP
-    : 'map'
-    ;
-
-MODULE
-    : 'module'
-    ;
-
-MOVED
-    : 'moved'
-    ;
-
-NUMBER
-    : 'number'
-    ;
-
-OBJECT
-    : 'object'
-    ;
-
-OPTIONAL
-    : 'optional'
-    ;
-
-OUTPUT
-    : 'output'
-    ;
-
-PROVIDER
-    : 'provider'
-    ;
-
-RESOURCE
-    : 'resource'
-    ;
-
-STRING
-    : 'string'
-    ;
+/**
+ *
+ * @author lkishalmi
+ */
+public class AbstractDef {
     
-TERRAFORM
-    : 'terraform'
-    ;
+    final String type;
+    final String name;
+    
+    Map<String, Attribute> attributes = new HashMap<>();
 
-VARIABLE
-    : 'variable'
-    ;
-
-VAR
-    : 'var'
-    ;
+    public AbstractDef(String type, String name) {
+        this.type = type;
+        this.name = name;
+    }
+    
+    public final String getId() {
+        return type + '.' + name;
+    }
+}

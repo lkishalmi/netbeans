@@ -45,38 +45,171 @@ package org.netbeans.modules.languages.terraform.grammar;
 }
 
 tfFile
-    : (localDef)* EOF
+    : (localDef | dataDef | resourceDef | moduleDef | variableDef | outputDef | providerDef | terraformDef )* EOF
     ;
 
 localDef
-    : LOCALS localBlock
+    : LOCALS simpleBlock
     ;
 
-localBlock
+simpleBlock
     : LBRACE assignment* RBRACE
     | LBRACE RBRACE
     ;
 
 assignment
-    : IDENTIFIER EQUAL value
+    : attribute EQUAL value
     ;
 
+dataDef
+    : DATA simpleString simpleString block
+    ;
+
+block
+    : LBRACE (assignment | namedBlock )* RBRACE
+    ;
+
+namedBlock
+    : attribute block
+    ;
+
+resourceDef
+    : RESOURCE simpleString simpleString block
+    ;
+
+moduleDef
+    : MODULE simpleString block
+    ;
+
+providerDef
+    : PROVIDER simpleString block
+    ;
+
+terraformDef
+    : TERRAFORM block
+    ;
+
+variableDef
+    : VARIABLE simpleString simpleBlock
+    ;
+
+outputDef
+    : OUTPUT simpleString simpleBlock
+    ;
+
+attribute
+    : IDENTIFIER
+    | PROVIDER
+    ;
+    
 value
-    : A_NUMBER
-    | A_BOOL
-    | NULL
-    | HEREDOC
-    | object
-    | array
+    : HEREDOC
+    | expr
     ;
 
 object
-    : LBRACE assignment*? RBRACE
+    : LBRACE (assignment COMMA?)*? RBRACE
     | LBRACE RBRACE
     ;
 
 
 array
-    : LBRACK value (COMMA value)* RBRACK
+    : LBRACK value (COMMA value)* COMMA? RBRACK
     | LBRACK RBRACK
+    ;
+
+expr
+    : LPAREN expr RPAREN
+    | NOT expr
+    | expr PLUS expr
+    | expr MINUS expr
+    | expr STAR expr
+    | expr SLASH expr
+    | expr LTE expr
+    | expr GTE expr
+    | expr EQUALS expr
+    | expr NOT_EQUALS
+    | expr AND expr
+    | expr OR expr
+    | <assoc=right> expr QUESTION expr COLON expr
+    | function
+    | reference
+    | loop
+    | object
+    | array
+    | terminal
+    ;
+
+loop
+    : LBRACK FOR IDENTIFIER (COMMA IDENTIFIER) IN expr COLON expr (IF expr)? RBRACK
+    | LBRACE FOR IDENTIFIER COMMA IDENTIFIER IN expr COLON expr RARROW expr (IF expr)? RBRACE
+    ;
+
+terminal
+    : A_NUMBER
+    | A_BOOL
+    | NULL
+    | IDENTIFIER
+    | stringValue
+    ;
+
+function
+    : IDENTIFIER LPAREN args RPAREN
+    | IDENTIFIER LPAREN RPAREN
+    ;
+    
+args
+    :  expr (COMMA expr)*
+    ;
+
+indexReference
+    : LBRACK expr RBRACK
+    ;
+
+fieldReference
+    : (indexReference | DOT IDENTIFIER) fieldReference?
+    ;
+    
+reference
+    : variableReference 
+    | dataReference 
+    | localReference
+    | moduleReference
+    | resourceReference
+    ;
+
+variableReference
+    : VAR DOT IDENTIFIER fieldReference?
+    ;
+
+dataReference
+    : DATA DOT IDENTIFIER DOT IDENTIFIER fieldReference?
+    ;
+
+localReference
+    : LOCAL DOT IDENTIFIER fieldReference?
+    ;
+
+moduleReference
+    : MODULE DOT IDENTIFIER fieldReference?
+    ;
+
+resourceReference
+    : IDENTIFIER DOT IDENTIFIER fieldReference?
+    ;
+
+simpleString
+    : QUOTE string QUOTE
+    ;
+
+stringValue
+    : QUOTE (string | interpolation)* QUOTE
+    ;
+
+string
+    : STRING_CONTENT+
+    ;
+
+interpolation
+    : INTERPOLATION+
     ;
