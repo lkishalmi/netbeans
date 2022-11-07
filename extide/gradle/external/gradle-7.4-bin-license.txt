@@ -1,6 +1,7 @@
 Name: Gradle
 Description: Gradle Build System
 Version: 7.4
+Files: gradle-7.6-rc-1-bin.jar
 License: Gradle
 Origin: Gradle Inc.
 URL: https://gradle.org/
