@@ -40,7 +40,7 @@ import org.netbeans.modules.parsing.impl.ParserAccessor;
  * @author Jan Jancura
  * @author Tomas Zezula
  */
-public abstract class Parser {
+public abstract class Parser <T extends Parser.Result> {
     
     static {
         ParserAccessor.setINSTANCE(new MyAccessor());
@@ -69,7 +69,7 @@ public abstract class Parser {
      * @param task              A task asking for parsing result.
      * @return                  Result of parsing or null.
      */
-    public abstract Result getResult (
+    public abstract T getResult (
         Task                    task
     ) throws ParseException;
         
