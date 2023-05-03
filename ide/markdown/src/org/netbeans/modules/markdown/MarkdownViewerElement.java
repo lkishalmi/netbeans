@@ -24,9 +24,9 @@ import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.data.DataHolder;
 import com.vladsch.flexmark.util.data.MutableDataSet;
 import java.awt.BorderLayout;
+import java.awt.Rectangle;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.Action;
 import javax.swing.JComponent;
@@ -34,21 +34,27 @@ import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JToolBar;
+import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.event.HyperlinkEvent;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.StyledDocument;
 import org.netbeans.core.spi.multiview.CloseOperationState;
 import org.netbeans.core.spi.multiview.MultiViewElement;
 import org.netbeans.core.spi.multiview.MultiViewElementCallback;
 import org.openide.awt.HtmlBrowser;
 import org.openide.awt.UndoRedo;
+import org.openide.cookies.EditorCookie;
 import org.openide.cookies.OpenCookie;
-import org.openide.filesystems.FileChangeAdapter;
-import org.openide.filesystems.FileChangeListener;
-import org.openide.filesystems.FileEvent;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
 import org.openide.loaders.DataObjectNotFoundException;
+import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.NbBundle.Messages;
+import org.openide.util.RequestProcessor;
+import org.openide.util.RequestProcessor.Task;
 import org.openide.windows.TopComponent;
 
 /**
@@ -67,6 +73,8 @@ import org.openide.windows.TopComponent;
 public class MarkdownViewerElement implements MultiViewElement {
 
     private static final Logger LOG = Logger.getLogger(MarkdownViewerElement.class.getName());
+    private static final RequestProcessor RP = new RequestProcessor(MarkdownViewerElement.class);
+    private static final int UPDATE_DELAY = 500;
 
     private final MarkdownDataObject dataObject;
     private transient JToolBar toolbar;
@@ -85,13 +93,27 @@ public class MarkdownViewerElement implements MultiViewElement {
     final Parser parser = Parser.builder(OPTIONS).build();
     final HtmlRenderer renderer = HtmlRenderer.builder(OPTIONS).build();
 
-    private final FileChangeListener fcl = new FileChangeAdapter() {
+    final DocumentListener dl = new DocumentListener() {
         @Override
-        public void fileChanged(FileEvent fe) {
-            updateView();
+        public void insertUpdate(DocumentEvent e) {
+            updater.schedule(UPDATE_DELAY);
         }
-    
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            updater.schedule(UPDATE_DELAY);
+        }
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+            updater.schedule(UPDATE_DELAY);
+        }
     };
+
+    private final Task updater = RP.create(MarkdownViewerElement.this::updateView);
+    private StyledDocument source;
+    private String displayedHtml = "";
+    private int viewerPos = 0;
 
     public MarkdownViewerElement(Lookup lookup) {
         dataObject = lookup.lookup(MarkdownDataObject.class);
@@ -134,22 +156,34 @@ public class MarkdownViewerElement implements MultiViewElement {
     @Override
     public void componentOpened() {
         FileObject fo = dataObject.getPrimaryFile();
-        fo.addFileChangeListener(fcl);
         callback.updateTitle(fo.getNameExt());
     }
 
     @Override
     public void componentClosed() {
-        dataObject.getPrimaryFile().removeFileChangeListener(fcl);
     }
 
     @Override
     public void componentShowing() {
-        updateView();
+        EditorCookie ec = getLookup().lookup(EditorCookie.class);
+        if (ec != null) {
+            RP.post(() -> {
+                try {
+                    source = ec.openDocument();
+                    source.addDocumentListener(dl);
+                    updateView();
+                } catch (IOException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+            });
+        }
     }
 
     @Override
     public void componentHidden() {
+        if (source != null) {
+            source.removeDocumentListener(dl);
+        }
     }
 
     @Override
@@ -176,15 +210,35 @@ public class MarkdownViewerElement implements MultiViewElement {
     }
 
     @Messages("TXT_MarkdownViewerElement_Error=<html>Something happened during markdown parsing.")
-    private void updateView() {
-        FileObject fo = dataObject.getPrimaryFile();
-        if ((fo != null) && (viewer != null)) {
+    public void updateView() {
+        if ((source != null) && (viewer != null)) {
             try {
-                String html = renderer.render(parser.parse(fo.asText("UTF-8")));
-                viewer.setText(html);
-            } catch (IOException ex) {
+                String content = source.getText(0, source.getLength());
+                String html = renderer.render(parser.parse(content));
+                SwingUtilities.invokeLater(() -> {
+                    int prevPos = viewer.getCaretPosition();
+                    viewer.setText(html);
+                    prevPos = Math.min(prevPos, viewer.getText().length());
+                    viewer.setCaretPosition(prevPos);
+//                    String newHtml = viewer.getText();
+//                    int maxChange = Math.min(newHtml.length(), displayedHtml.length());
+//                    int pos ;
+//                    for (pos = 0; pos < maxChange && (displayedHtml.charAt(pos) == newHtml.charAt(pos)); pos++);
+//                    displayedHtml = newHtml;
+//                    try {
+//                        Rectangle r = viewer.modelToView(pos);
+//                        if (r != null) {
+//                            Rectangle vis = viewer.getVisibleRect();
+//                            r.height = vis.height;
+//                            viewer.scrollRectToVisible(r);
+//                            viewer.setCaretPosition(pos);
+//                        }
+//                    } catch (BadLocationException ex) {
+//                        // Do nothing, we've tried
+//                    }
+                });
+            } catch (BadLocationException ex) {
                 viewer.setText(Bundle.TXT_MarkdownViewerElement_Error());
-                LOG.log(Level.WARNING, "Could not parse markdown!", ex);
             }
         }
     }
