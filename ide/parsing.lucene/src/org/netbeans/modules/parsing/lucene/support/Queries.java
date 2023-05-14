@@ -26,11 +26,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.lucene.document.FieldSelector;
-import org.apache.lucene.document.FieldSelectorResult;
+import org.apache.lucene.document.DocumentStoredFieldVisitor;
+import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermDocs;
+import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.DocIdSet;
@@ -738,28 +738,6 @@ public final class Queries {
         @Override
         public BooleanQuery createBooleanQuery() {
             return new TCBooleanQuery();
-        }
-    }
-
-    private static class FieldSelectorImpl implements FieldSelector {
-
-        private final Term[] terms;
-
-        FieldSelectorImpl(String... fieldNames) {
-            terms = new Term[fieldNames.length];
-            for (int i=0; i< fieldNames.length; i++) {
-                terms[i] = new Term (fieldNames[i],""); //NOI18N
-            }
-        }
-
-        @Override
-        public FieldSelectorResult accept(String fieldName) {
-            for (Term t : terms) {
-                if (fieldName == t.field()) {
-                    return FieldSelectorResult.LOAD;
-                }
-            }
-            return FieldSelectorResult.NO_LOAD;
         }
     }
 

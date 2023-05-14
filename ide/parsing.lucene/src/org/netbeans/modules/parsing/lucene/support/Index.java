@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.FieldSelector;
+import org.apache.lucene.document.DocumentStoredFieldVisitor;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
 import org.netbeans.api.annotations.common.NonNull;
@@ -86,28 +86,28 @@ public interface Index {
      * Queries the {@link Index} by given queries.
      * @param result the {@link Collection} to store query results into
      * @param convertor the {@link Convertor} used to convert lucene documents into the user objects added into the result
-     * @param selector the selector used to select document's fields which should be loaded, if null all fields are loaded
+     * @param visitor the visitor used to select document's fields which should be loaded, if null all fields are loaded
      * @param cancel the {@link AtomicBoolean} used to cancel the index iteration by the caller. When set to true the iteration
      * is stopped.
      * @param queries the queries to be performed on the {@link Index}
      * @throws IOException in case of IO problem
      * @throws InterruptedException when query was canceled
      */
-    <T> void query (Collection<? super T> result, @NonNull Convertor<? super Document, T> convertor, @NullAllowed FieldSelector selector, @NullAllowed AtomicBoolean cancel, @NonNull Query... queries) throws IOException, InterruptedException;
+    <T> void query (Collection<? super T> result, @NonNull Convertor<? super Document, T> convertor, @NullAllowed DocumentStoredFieldVisitor visitor, @NullAllowed AtomicBoolean cancel, @NonNull Query... queries) throws IOException, InterruptedException;
     
     /**
      * Queries the {@link Index} by given queries. In addition to documents it also collects the terms which matched the queries.
      * @param result the {@link Collection} to store query results into
      * @param convertor the {@link Convertor} used to convert lucene documents into the user objects added into the result
      * @param termConvertor the {@link Convertor} used to convert lucene terms into the user objects added into the result
-     * @param selector the selector used to select document's fields which should be loaded, if null all fields are loaded
+     * @param visitor the visitor used to select document's fields which should be loaded, if null all fields are loaded
      * @param cancel the {@link AtomicBoolean} used to cancel the index iteration by the caller. When set to true the iteration
      * is stopped.
      * @param queries the queries to be performed on the {@link Index}
      * @throws IOException in case of IO problem
      * @throws InterruptedException when query was canceled
      */
-    <S, T> void queryDocTerms(Map<? super T, Set<S>> result, @NonNull Convertor<? super Document, T> convertor, @NonNull Convertor<? super Term, S> termConvertor,@NullAllowed FieldSelector selector, @NullAllowed AtomicBoolean cancel, @NonNull Query... queries) throws IOException, InterruptedException;
+    <S, T> void queryDocTerms(Map<? super T, Set<S>> result, @NonNull Convertor<? super Document, T> convertor, @NonNull Convertor<? super Term, S> termConvertor,@NullAllowed DocumentStoredFieldVisitor visitor, @NullAllowed AtomicBoolean cancel, @NonNull Query... queries) throws IOException, InterruptedException;
     
     /**
      * Queries the {@link Index}'s b-tree for terms starting by the start term and accepted by the filter.

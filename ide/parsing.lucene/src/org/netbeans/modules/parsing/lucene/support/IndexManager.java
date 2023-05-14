@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.KeywordAnalyzer;
+import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.index.Term;
 import org.netbeans.api.annotations.common.NonNull;
 import org.netbeans.modules.masterfs.providers.ProvidedExtensions;
