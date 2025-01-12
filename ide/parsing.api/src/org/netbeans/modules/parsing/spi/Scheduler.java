@@ -48,9 +48,9 @@ import org.openide.util.RequestProcessor.Task;
 public abstract class Scheduler {
     
     /**
-     * Default reparse delay
+     * Default reparse delay is 500ms
      */
-    public static final int DEFAULT_REPARSE_DELAY = 500;
+    public static final int DEFAULT_REPARSE_DELAY = Integer.getInteger("nb.editor.reparseDelay", 500);
 
     private static final Logger LOG = Logger.getLogger(Scheduler.class.getName());
 
