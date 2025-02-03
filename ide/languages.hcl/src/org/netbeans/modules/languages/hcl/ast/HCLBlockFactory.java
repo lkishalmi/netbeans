@@ -55,7 +55,7 @@ public final class HCLBlockFactory extends HCLElementFactory {
     protected HCLBlock block(HCLParser.BlockContext ctx) {
         
        ArrayList<HCLElement> elements = new ArrayList<>();
-        
+
         if (ctx.body() != null) {
             elements.addAll(body(ctx.body()));
         }
@@ -91,7 +91,7 @@ public final class HCLBlockFactory extends HCLElementFactory {
             }
         }
         
-        return created(new HCLBlock(decl, elements), ctx);
+        return created(new HCLBlock(decl, created(new HCLBlockBody(elements), ctx.body())), ctx);
     }
 
     protected List<HCLElement> body(HCLParser.BodyContext ctx) {

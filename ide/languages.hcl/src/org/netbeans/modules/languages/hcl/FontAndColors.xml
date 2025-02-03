@@ -45,4 +45,5 @@
     </fontcolor>
     <fontcolor name="mod-field" default="field">
     </fontcolor>
+    <fontcolor name="mod-unused" waveUnderlined="999999"/>
 </fontscolors>

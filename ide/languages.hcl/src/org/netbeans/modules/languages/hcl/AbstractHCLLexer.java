@@ -18,6 +18,7 @@
  */
 package org.netbeans.modules.languages.hcl;
 
+import org.netbeans.modules.languages.hcl.spi.HCLTokenId;
 import java.text.Normalizer;
 import java.util.BitSet;
 import java.util.LinkedList;
@@ -37,7 +38,7 @@ import org.netbeans.modules.languages.hcl.grammar.HCLLexer;
 import org.netbeans.spi.lexer.LexerRestartInfo;
 import org.netbeans.spi.lexer.antlr4.AbstractAntlrLexerBridge;
 
-import static org.netbeans.modules.languages.hcl.HCLTokenId.*;
+import static org.netbeans.modules.languages.hcl.spi.HCLTokenId.*;
 import static org.netbeans.modules.languages.hcl.grammar.HCLLexer.*;
 
 

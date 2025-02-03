@@ -86,17 +86,11 @@ public final class TerraformSemanticAnalyzer extends HCLSemanticAnalyzer {
                 if ((rootBlockType != null) && (attr.base() instanceof HCLVariable var)) {
                     String name = var.name().id();
                     switch (rootBlockType) {
-                        case CHECK:
-                        case DATA:
-                        case LOCALS:
-                        case MODULE:
-                        case OUTPUT:
-                        case PROVIDER:
-                        case RESOURCE:
+                        case CHECK, DATA, LOCALS, MODULE, OUTPUT, PROVIDER, RESOURCE -> {
                             if (RESOLVE_BASES.contains(name)) {
                                 mark(attr.base(), ColoringAttributes.FIELD_SET);
                             }
-                            break;
+                        }
                     }
                 }
             } else if (rootBlockType == BlockType.VARIABLE && (step.node() instanceof HCLVariable var)) {

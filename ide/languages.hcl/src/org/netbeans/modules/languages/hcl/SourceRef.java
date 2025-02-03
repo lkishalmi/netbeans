@@ -19,6 +19,7 @@
 package org.netbeans.modules.languages.hcl;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -38,9 +39,11 @@ import org.openide.filesystems.FileObject;
  */
 public class SourceRef {
     public final Snapshot source;
-    private Map<HCLElement, OffsetRange> elementOffsets = new IdentityHashMap<>();
+    private static final Comparator<OffsetRange> INCLUSION_ORDER =
+            (o1, o2) -> o1.getStart() != o2.getStart() ? o1.getStart() - o2.getStart() : o2.getEnd() - o1.getEnd();
 
-    private TreeMap<OffsetRange, HCLElement> elementAt = new TreeMap<>((o1, o2) -> o1.getStart() != o2.getStart() ? o1.getStart() - o2.getStart() : o2.getEnd() - o1.getEnd());
+    private final Map<HCLElement, OffsetRange> elementOffsets = new IdentityHashMap<>();
+    private final TreeMap<OffsetRange, HCLElement> elementAt = new TreeMap<>(INCLUSION_ORDER);
     
     public SourceRef(Snapshot source) {
         this.source = source;
@@ -70,7 +73,7 @@ public class SourceRef {
         if (index < 0) {
             return Collections.emptyList();
         }
-        List<HCLElement> ret = new LinkedList<>();
+        LinkedList<HCLElement> ret = new LinkedList<>();
         Iterator<Map.Entry<OffsetRange, HCLElement>> it = elementAt.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<OffsetRange, HCLElement> e = it.next();
@@ -81,7 +84,7 @@ public class SourceRef {
             if (or.getEnd() <= index) {
                 continue;
             }
-            ret.add(e.getValue());
+            ret.addFirst(e.getValue());
         }
         return ret.isEmpty() ? Collections.emptyList() : Collections.unmodifiableList(ret);
     }

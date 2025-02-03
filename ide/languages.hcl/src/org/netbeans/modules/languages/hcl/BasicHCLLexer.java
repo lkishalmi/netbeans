@@ -18,9 +18,10 @@
  */
 package org.netbeans.modules.languages.hcl;
 
+import org.netbeans.modules.languages.hcl.spi.HCLTokenId;
 import org.antlr.v4.runtime.Vocabulary;
 import org.netbeans.api.lexer.Token;
-import static org.netbeans.modules.languages.hcl.HCLTokenId.*;
+import static org.netbeans.modules.languages.hcl.spi.HCLTokenId.*;
 import org.netbeans.modules.languages.hcl.grammar.HCLLexer;
 import static org.netbeans.modules.languages.hcl.grammar.HCLLexer.*;
 import org.netbeans.spi.lexer.LexerRestartInfo;

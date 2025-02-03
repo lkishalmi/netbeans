@@ -24,6 +24,6 @@ import java.util.List;
  *
  * @author Laszlo Kishalmi
  */
-public sealed interface HCLElement permits HCLExpression, HCLContainer, HCLAttribute {
+public sealed interface HCLElement permits HCLExpression, HCLContainer, HCLAttribute, HCLBlockBody {
     List<? extends HCLElement> elements();
 }

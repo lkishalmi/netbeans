@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.netbeans.modules.languages.hcl;
+package org.netbeans.modules.languages.hcl.spi;
 
 import org.netbeans.api.lexer.TokenId;
 

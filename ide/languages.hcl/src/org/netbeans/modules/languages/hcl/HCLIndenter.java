@@ -18,6 +18,7 @@
  */
 package org.netbeans.modules.languages.hcl;
 
+import org.netbeans.modules.languages.hcl.spi.HCLTokenId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -41,7 +42,7 @@ import org.netbeans.modules.editor.indent.spi.IndentTask;
 import org.netbeans.modules.editor.indent.spi.support.AutomatedIndenting;
 import org.netbeans.spi.editor.typinghooks.TypedTextInterceptor;
 
-import static org.netbeans.modules.languages.hcl.HCLTokenId.*;
+import static org.netbeans.modules.languages.hcl.spi.HCLTokenId.*;
 
 /**
  *

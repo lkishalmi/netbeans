@@ -18,6 +18,7 @@
  */
 package org.netbeans.modules.languages.hcl;
 
+import org.netbeans.modules.languages.hcl.spi.HCLTokenId;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;

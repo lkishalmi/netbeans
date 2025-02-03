@@ -32,8 +32,8 @@ public final class HCLBlock extends HCLContainer  {
 
     private final List<HCLIdentifier> declaration;
 
-    public HCLBlock(List<HCLIdentifier> declaration, List<HCLElement> elements) {
-        super(elements);
+    public HCLBlock(List<HCLIdentifier> declaration, HCLBlockBody body) {
+        super(body != null ? body.elements() : List.of());
         Objects.requireNonNull(declaration, "declaration cannot be null");
         if (declaration.isEmpty()) {
             throw new IllegalArgumentException("declaration cannot be empty");
@@ -49,6 +49,7 @@ public final class HCLBlock extends HCLContainer  {
     public String id() {
         return id;
     }
+
     @Override
     public String toString() {
         return "HCLBlock[declaration=" + declaration + ", elements=" + elements + "]";

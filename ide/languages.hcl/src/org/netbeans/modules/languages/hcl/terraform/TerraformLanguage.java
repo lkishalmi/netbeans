@@ -29,7 +29,7 @@ import org.netbeans.modules.csl.api.StructureScanner;
 import org.netbeans.modules.csl.spi.LanguageRegistration;
 import org.netbeans.modules.languages.hcl.BasicHCLLexer;
 import org.netbeans.modules.languages.hcl.HCLLanguage;
-import org.netbeans.modules.languages.hcl.HCLTokenId;
+import org.netbeans.modules.languages.hcl.spi.HCLTokenId;
 import org.netbeans.modules.languages.hcl.NbHCLParser;
 import org.netbeans.modules.parsing.spi.Parser;
 import org.netbeans.spi.lexer.EmbeddingPresence;
@@ -74,7 +74,7 @@ public final class TerraformLanguage extends HCLLanguage {
 
     @Override
     public Parser getParser() {
-        return new NbHCLParser<TerraformParserResult>(TerraformParserResult::new);
+        return new NbHCLParser<>(TerraformParserResult::new);
     }
 
     @Override

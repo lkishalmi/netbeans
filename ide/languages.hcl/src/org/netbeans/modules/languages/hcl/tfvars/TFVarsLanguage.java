@@ -26,7 +26,7 @@ import org.netbeans.api.lexer.LanguagePath;
 import org.netbeans.api.lexer.Token;
 import org.netbeans.modules.csl.api.StructureScanner;
 import org.netbeans.modules.csl.spi.LanguageRegistration;
-import org.netbeans.modules.languages.hcl.HCLTokenId;
+import org.netbeans.modules.languages.hcl.spi.HCLTokenId;
 import org.netbeans.modules.languages.hcl.BasicHCLLexer;
 import org.netbeans.modules.languages.hcl.HCLLanguage;
 import org.netbeans.modules.languages.hcl.NbHCLParser;
