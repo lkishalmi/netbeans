@@ -30,6 +30,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
@@ -268,6 +271,20 @@ public final class GradleDistributionManager {
      */
     public GradleDistribution defaultDistribution() {
         return distributionFromVersion(GradleVersion.current().getVersion());
+    }
+
+    public GradleDistribution latestDistribution() {
+        HttpClient client = HttpClient.newHttpClient();
+        try {
+            HttpRequest request = HttpRequest.newBuilder(new URI("https://services.gradle.org/versions/current")) //NOI18N
+                    .GET().build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            Object current = new JSONParser().parse(response.body());
+        } catch (IOException ex) {
+
+        } catch (URISyntaxException se) {
+
+        }
     }
 
     /**
