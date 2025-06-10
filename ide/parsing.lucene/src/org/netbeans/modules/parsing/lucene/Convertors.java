@@ -21,7 +21,7 @@ package org.netbeans.modules.parsing.lucene;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermEnum;
+import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.Query;
 import org.netbeans.api.annotations.common.NonNull;
 import org.netbeans.modules.parsing.lucene.support.Convertor;
@@ -52,11 +52,11 @@ class Convertors {
         return new RemoveConvertor();
     }
 
-    static <T> StoppableConvertor<TermEnum,T> newTermEnumToTermConvertor(@NonNull StoppableConvertor<Term,T> delegate) {
+    static <T> StoppableConvertor<TermsEnum, T> newTermEnumToTermConvertor(@NonNull StoppableConvertor<Term, T> delegate) {
         return new TermEnumToTerm<>(delegate);
     }
 
-    static <T> StoppableConvertor<TermEnum,T> newTermEnumToFreqConvertor(@NonNull StoppableConvertor<Index.WithTermFrequencies.TermFreq,T> delegate) {
+    static <T> StoppableConvertor<TermsEnum, T> newTermEnumToFreqConvertor(@NonNull StoppableConvertor<Index.WithTermFrequencies.TermFreq, T> delegate) {
         return new TermEnumToFreq<>(delegate);
     }
 
@@ -82,7 +82,7 @@ class Convertors {
         }
     }
 
-    private static class TermEnumToTerm<T> implements StoppableConvertor<TermEnum,T>, IndexReaderInjection {
+    private static class TermEnumToTerm<T> implements StoppableConvertor<TermsEnum, T>, IndexReaderInjection {
 
         private final StoppableConvertor<Term,T> delegate;
 
@@ -91,7 +91,7 @@ class Convertors {
         }
 
         @Override
-        public T convert(@NonNull final TermEnum terms) throws StoppableConvertor.Stop {
+        public T convert(@NonNull final TermsEnum terms) throws StoppableConvertor.Stop {
             final Term currentTerm = terms.term();
             if (currentTerm == null) {
                 return null;
@@ -107,7 +107,7 @@ class Convertors {
         }
     }
 
-    private static class TermEnumToFreq<T> implements StoppableConvertor<TermEnum, T>, IndexReaderInjection {
+    private static class TermEnumToFreq<T> implements StoppableConvertor<TermsEnum, T>, IndexReaderInjection {
 
         private final SupportAccessor accessor = SupportAccessor.getInstance();
         private final Index.WithTermFrequencies.TermFreq tf = accessor.newTermFreq();
@@ -118,7 +118,7 @@ class Convertors {
         }
 
         @Override
-        public T convert(TermEnum terms) throws StoppableConvertor.Stop {
+        public T convert(TermsEnum terms) throws StoppableConvertor.Stop {
             final Term currentTerm = terms.term();
             if (currentTerm == null) {
                 return null;

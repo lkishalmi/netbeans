@@ -25,7 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.Scorer;
@@ -73,9 +73,9 @@ public final class TermCollector extends Collector {
     }
 
     @Override
-    public void setNextReader(IndexReader reader, int i) throws IOException {
-        delegate.setNextReader(reader, i);
-        indexOffset = i;
+    public void setNextReader(AtomicReaderContext arc) throws IOException {
+        delegate.setNextReader(arc);
+        indexOffset = arc.docBase;
     }
 
     @Override

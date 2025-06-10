@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.FieldSelector;
+import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.search.Query;
 import org.netbeans.api.annotations.common.NonNull;
 import org.netbeans.api.annotations.common.NullAllowed;
@@ -241,20 +241,18 @@ public class DocumentIndexImpl implements DocumentIndex2, Runnable {
     public <T> Collection<? extends T> query(
             @NonNull final Query query,
             @NonNull final Convertor<? super IndexDocument, ? extends T> convertor,
-            @NullAllowed final String... fieldsToLoad) throws IOException, InterruptedException {
+            @NullAllowed String... fieldsToLoad) throws IOException, InterruptedException {
         Parameters.notNull("query", query); //NOI18N
         Parameters.notNull("convertor", convertor); //NOI18N
         final Collection<T> result = new ArrayDeque<>();
-        FieldSelector selector = null;
         if (fieldsToLoad != null && fieldsToLoad.length > 0) {
-            final String[] fieldsWithSource = Arrays.copyOf(fieldsToLoad, fieldsToLoad.length+1);
-            fieldsWithSource[fieldsToLoad.length] = IndexDocumentImpl.FIELD_PRIMARY_KEY;
-            selector = Queries.createFieldSelector(fieldsWithSource);
+            fieldsToLoad = Arrays.copyOf(fieldsToLoad, fieldsToLoad.length+1);
+            fieldsToLoad[fieldsToLoad.length] = IndexDocumentImpl.FIELD_PRIMARY_KEY;
         }
         luceneIndex.query(
             result,
             org.netbeans.modules.parsing.lucene.support.Convertors.compose(queryConvertor, convertor),
-            selector,
+            fieldsToLoad,
             null,
             query);
         return result;

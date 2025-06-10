@@ -19,8 +19,9 @@
 
 package org.netbeans.modules.parsing.lucene;
 
+import java.io.IOException;
 import java.util.BitSet;
-import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.Scorer;
 
@@ -55,8 +56,8 @@ class BitSetCollector extends Collector {
     }
 
     @Override
-    public void setNextReader(IndexReader reader, int docBase) {
-      this.docBase = docBase;
+    public void setNextReader(AtomicReaderContext arc) throws IOException {
+      this.docBase = arc.docBase;
     }
 
 }

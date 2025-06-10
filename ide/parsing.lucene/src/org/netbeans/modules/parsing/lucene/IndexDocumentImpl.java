@@ -21,7 +21,6 @@ package org.netbeans.modules.parsing.lucene;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
@@ -78,7 +77,7 @@ public final class IndexDocumentImpl implements IndexDocument {
     }        
 
     @SuppressWarnings("deprecation") //NOI18N
-    private static Fieldable sourceNameField(String relativePath) {
+    private static Field sourceNameField(String relativePath) {
         return new Field(FIELD_PRIMARY_KEY, relativePath, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
     }
     

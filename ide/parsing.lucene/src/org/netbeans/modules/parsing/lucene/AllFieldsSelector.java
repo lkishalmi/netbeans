@@ -18,21 +18,23 @@
  */
 package org.netbeans.modules.parsing.lucene;
 
-import org.apache.lucene.document.FieldSelector;
-import org.apache.lucene.document.FieldSelectorResult;
+import java.io.IOException;
+import org.apache.lucene.index.FieldInfo;
+import org.apache.lucene.index.StoredFieldVisitor;
 
 /**
  *
  * @author Tomas Zezula
  */
-final class AllFieldsSelector implements FieldSelector {
+final class AllFieldsSelector extends StoredFieldVisitor {
     
-    static final FieldSelector INSTANCE = new AllFieldsSelector();
+    static final StoredFieldVisitor INSTANCE = new AllFieldsSelector();
     
     private AllFieldsSelector(){}
-    
+
     @Override
-    public FieldSelectorResult accept(final String fieldName) {
-        return FieldSelectorResult.LOAD;
+    public Status needsField(FieldInfo fi) throws IOException {
+        return Status.YES;
     }
+
 }

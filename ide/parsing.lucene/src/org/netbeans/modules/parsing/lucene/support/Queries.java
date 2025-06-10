@@ -26,22 +26,25 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.lucene.document.FieldSelector;
-import org.apache.lucene.document.FieldSelectorResult;
+import org.apache.lucene.index.AtomicReader;
+import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.StoredFieldVisitor;
+import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermDocs;
+import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.FilteredQuery;
-import org.apache.lucene.search.FilteredTermEnum;
+import org.apache.lucene.index.FilteredTermsEnum;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.PrefixQuery;
-import org.apache.lucene.search.PrefixTermEnum;
+import org.apache.lucene.search.PrefixTermsEnum;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.OpenBitSet;
 import org.netbeans.api.annotations.common.CheckForNull;
 import org.netbeans.api.annotations.common.NonNull;
@@ -219,11 +222,11 @@ public final class Queries {
     }
 
     /**
-     * Creates a FieldSelector loading the given fields.
+     * Creates a StoredFieldVisitor loading the given fields.
      * @param fieldsToLoad the fields to be loaded into the document.
-     * @return the created FieldSelector
+     * @return the created StoredFieldVisitor
      */
-    public static FieldSelector createFieldSelector(final @NonNull String... fieldsToLoad) {
+    public static StoredFieldVisitor createFieldSelector(final @NonNull String... fieldsToLoad) {
         return new FieldSelectorImpl(fieldsToLoad);
     }
 
@@ -390,8 +393,10 @@ public final class Queries {
         private  TermCollector termCollector;
 
         @Override
-        public final DocIdSet getDocIdSet(IndexReader reader) throws IOException {
-            final FilteredTermEnum enumerator = getTermEnum(reader);
+        public final DocIdSet getDocIdSet(AtomicReaderContext arc, Bits bits) throws IOException {
+            AtomicReader reader = arc.reader();
+            final FilteredTermsEnum enumerator = getTermEnum(reader);
+            
             // if current term in enum is null, the enum is empty -> shortcut
             if (enumerator.term() == null) {
                 return DocIdSet.EMPTY_DOCIDSET;
@@ -428,17 +433,38 @@ public final class Queries {
                 enumerator.close();
             }
         }
+        /*
+        public DocIdSet getDocIdSet(AtomicReaderContext arc, Bits bits) throws IOException {
+            if (pkgs.isEmpty()) {
+                return DocIdSet.EMPTY_DOCIDSET;
+            }
+            List<Term> terms = pkgs.stream()
+                                   .map(pkg -> new Term(DocumentUtil.FIELD_PACKAGE_NAME, pkg))
+                                   .toList();
+            AtomicReader reader = arc.reader();
+            OpenBitSet bitSet = new OpenBitSet(reader.maxDoc());
+            for (Term term : terms) {
+                DocsEnum docsEnum = reader.termDocsEnum(term);
+                int doc = docsEnum.nextDoc();
+                while (doc != DocsEnum.NO_MORE_DOCS) {
+                    bitSet.set(doc);
+                    doc = docsEnum.nextDoc();
+                }
+            }
+            return bitSet;
+        }
+        */
 
         @Override
         public final void attach(final TermCollector tc) {
             this.termCollector = tc;
         }
 
-        protected abstract FilteredTermEnum getTermEnum(IndexReader reader) throws IOException;
+        protected abstract FilteredTermsEnum getTermEnum(IndexReader reader) throws IOException;
 
     }
 
-    private static class RegexpTermEnum extends FilteredTermEnum {
+    private static class RegexpTermEnum extends FilteredTermsEnum {
 
         private final String fieldName;
         private final String startPrefix;
@@ -507,7 +533,7 @@ public final class Queries {
         }
 
         @Override
-        protected FilteredTermEnum getTermEnum(final @NonNull IndexReader reader) throws IOException {
+        protected FilteredTermsEnum getTermEnum(final @NonNull IndexReader reader) throws IOException {
             return new RegexpTermEnum(reader, fieldName, pattern, startPrefix);
         }
 
@@ -554,8 +580,8 @@ public final class Queries {
         }
 
         @Override
-        protected FilteredTermEnum getTermEnum(final @NonNull IndexReader reader) throws IOException {
-            return new PrefixTermEnum(reader, term);
+        protected FilteredTermsEnum getTermEnum(final @NonNull IndexReader reader) throws IOException {
+            return new PrefixTermsEnum(reader, term);
         }
     }
 
@@ -566,7 +592,7 @@ public final class Queries {
         }
 
         @Override
-        protected FilteredTermEnum getTermEnum(IndexReader reader) throws IOException {
+        protected FilteredTermsEnum getTermEnum(IndexReader reader) throws IOException {
             return new PrefixTermEnum(reader, term) {
 
                 private boolean endEnum;
@@ -596,8 +622,8 @@ public final class Queries {
         }
 
         @Override
-        protected FilteredTermEnum getTermEnum(IndexReader reader) throws IOException {
-            return new PrefixTermEnum(reader, term) {
+        protected FilteredTermsEnum getTermEnum(IndexReader reader) throws IOException {
+            return new PrefixsTermEnum(reader, term) {
 
                 private boolean endEnum;
 
@@ -731,7 +757,7 @@ public final class Queries {
         }
     }
 
-    private static class FieldSelectorImpl implements FieldSelector {
+    private static class FieldSelectorImpl extends StoredFieldVisitor {
 
         private final Term[] terms;
 
@@ -743,13 +769,13 @@ public final class Queries {
         }
 
         @Override
-        public FieldSelectorResult accept(String fieldName) {
-            for (Term t : terms) {
-                if (fieldName == t.field()) {
-                    return FieldSelectorResult.LOAD;
+        public Status needsField(FieldInfo fi) throws IOException {
+            for (Term term : terms) {
+                if (term.field().equals(fi.name)) {
+                    return Status.YES;
                 }
             }
-            return FieldSelectorResult.NO_LOAD;
+            return Status.NO;
         }
     }
 

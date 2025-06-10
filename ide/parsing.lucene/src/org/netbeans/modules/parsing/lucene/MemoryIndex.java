@@ -24,14 +24,13 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.LimitTokenCountAnalyzer;
+import org.apache.lucene.analysis.miscellaneous.LimitTokenCountAnalyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.FieldSelector;
+import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
@@ -81,7 +80,7 @@ public class MemoryIndex implements Index {
     public <T> void query(
             @NonNull Collection<? super T> result,
             @NonNull Convertor<? super Document, T> convertor,
-            @NullAllowed FieldSelector selector,
+            @NullAllowed StoredFieldVisitor selector,
             @NullAllowed AtomicBoolean cancel,
             @NonNull Query... queries) throws IOException, InterruptedException {
         Parameters.notNull("queries", queries);   //NOI18N
@@ -100,14 +99,13 @@ public class MemoryIndex implements Index {
             }
             BitSet bs = new BitSet(in.maxDoc());
             Collector c = new BitSetCollector(bs);
-            try (IndexSearcher searcher = new IndexSearcher(in)) {
-                for (Query q : queries) {
-                    if (cancel != null && cancel.get()) {
-                        throw new InterruptedException ();
-                    }
-                    searcher.search(q, c);
+            IndexSearcher searcher = new IndexSearcher(in);
+            for (Query q : queries) {
+                if (cancel != null && cancel.get()) {
+                    throw new InterruptedException ();
                 }
-            }        
+                searcher.search(q, c);
+            }
             for (int docNum = bs.nextSetBit(0); docNum >= 0; docNum = bs.nextSetBit(docNum+1)) {
                 if (cancel != null && cancel.get()) {
                     throw new InterruptedException ();
@@ -128,7 +126,7 @@ public class MemoryIndex implements Index {
             @NonNull Map<? super T, Set<S>> result,
             @NonNull Convertor<? super Document, T> convertor,
             @NonNull Convertor<? super Term, S> termConvertor,
-            @NullAllowed FieldSelector selector,
+            @NullAllowed StoredFieldVisitor selector,
             @NullAllowed AtomicBoolean cancel,
             @NonNull Query... queries) throws IOException, InterruptedException {
         Parameters.notNull("result", result);   //NOI18N
@@ -150,19 +148,18 @@ public class MemoryIndex implements Index {
             BitSet bs = new BitSet(in.maxDoc());
             Collector c = new BitSetCollector(bs);
             TermCollector termCollector = new TermCollector(c);
-            try (IndexSearcher searcher = new IndexSearcher(in)) {
-                for (Query q : queries) {
-                    if (cancel != null && cancel.get()) {
-                        throw new InterruptedException ();
-                    }
-                    if (q instanceof TermCollector.TermCollecting termCollecting) {
-                        termCollecting.attach(termCollector);
-                    } else {
-                        throw new IllegalArgumentException (
-                                "Query: %s does not implement TermCollecting".formatted(q.getClass().getName())); //NOI18N
-                    }
-                    searcher.search(q, termCollector);
+            IndexSearcher searcher = new IndexSearcher(in);
+            for (Query q : queries) {
+                if (cancel != null && cancel.get()) {
+                    throw new InterruptedException ();
                 }
+                if (q instanceof TermCollector.TermCollecting termCollecting) {
+                    termCollecting.attach(termCollector);
+                } else {
+                    throw new IllegalArgumentException (
+                            "Query: %s does not implement TermCollecting".formatted(q.getClass().getName())); //NOI18N
+                }
+                searcher.search(q, termCollector);
             }
 
             for (int docNum = bs.nextSetBit(0); docNum >= 0; docNum = bs.nextSetBit(docNum+1)) {
@@ -198,7 +195,8 @@ public class MemoryIndex implements Index {
             if (in == null) {
                 return;
             }
-            try (TermEnum terms = start == null ? in.terms() : in.terms(start)) {
+            TermEnum terms = start == null ? in.terms() : in.terms(start);
+            try {
                 do {
                     if (cancel != null && cancel.get()) {
                         throw new InterruptedException ();

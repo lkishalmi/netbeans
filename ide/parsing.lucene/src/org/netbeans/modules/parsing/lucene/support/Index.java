@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.FieldSelector;
+import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
 import org.netbeans.api.annotations.common.NonNull;
@@ -93,7 +93,7 @@ public interface Index {
      * @throws IOException in case of IO problem
      * @throws InterruptedException when query was canceled
      */
-    <T> void query (Collection<? super T> result, @NonNull Convertor<? super Document, T> convertor, @NullAllowed FieldSelector selector, @NullAllowed AtomicBoolean cancel, @NonNull Query... queries) throws IOException, InterruptedException;
+    <T> void query (Collection<? super T> result, @NonNull Convertor<? super Document, T> convertor, String[] fieldsToLoad, @NullAllowed AtomicBoolean cancel, @NonNull Query... queries) throws IOException, InterruptedException;
     
     /**
      * Queries the {@link Index} by given queries. In addition to documents it also collects the terms which matched the queries.
@@ -107,7 +107,7 @@ public interface Index {
      * @throws IOException in case of IO problem
      * @throws InterruptedException when query was canceled
      */
-    <S, T> void queryDocTerms(Map<? super T, Set<S>> result, @NonNull Convertor<? super Document, T> convertor, @NonNull Convertor<? super Term, S> termConvertor,@NullAllowed FieldSelector selector, @NullAllowed AtomicBoolean cancel, @NonNull Query... queries) throws IOException, InterruptedException;
+    <S, T> void queryDocTerms(Map<? super T, Set<S>> result, @NonNull Convertor<? super Document, T> convertor, @NonNull Convertor<? super Term, S> termConvertor, String[] fieldsToLoad, @NullAllowed AtomicBoolean cancel, @NonNull Query... queries) throws IOException, InterruptedException;
     
     /**
      * Queries the {@link Index}'s b-tree for terms starting by the start term and accepted by the filter.
