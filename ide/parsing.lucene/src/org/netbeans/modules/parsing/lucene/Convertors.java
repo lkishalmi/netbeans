@@ -52,11 +52,11 @@ class Convertors {
         return new RemoveConvertor();
     }
 
-    static <T> StoppableConvertor<TermEnum, T> newTermEnumToTermConvertor(@NonNull StoppableConvertor<Term, T> delegate) {
+    static <T> StoppableConvertor<TermEnum,T> newTermEnumToTermConvertor(@NonNull StoppableConvertor<Term,T> delegate) {
         return new TermEnumToTerm<>(delegate);
     }
 
-    static <T> StoppableConvertor<TermEnum, T> newTermEnumToFreqConvertor(@NonNull StoppableConvertor<Index.WithTermFrequencies.TermFreq, T> delegate) {
+    static <T> StoppableConvertor<TermEnum,T> newTermEnumToFreqConvertor(@NonNull StoppableConvertor<Index.WithTermFrequencies.TermFreq,T> delegate) {
         return new TermEnumToFreq<>(delegate);
     }
 

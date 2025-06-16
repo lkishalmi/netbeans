@@ -291,7 +291,7 @@ public class MemoryIndex implements Index {
         assert lock.isWriteLockedByCurrentThread();
         if (cachedReader != null) {
             IndexReader newReader = IndexReader.openIfChanged(cachedReader);
-            if (newReader != null) {
+            if (newReader != cachedReader) {
                 cachedReader.close();
                 cachedReader = newReader;
             }

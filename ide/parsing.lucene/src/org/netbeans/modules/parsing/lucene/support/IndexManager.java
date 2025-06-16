@@ -271,8 +271,8 @@ public final class IndexManager {
      * @since 2.4
      */
     @NonNull
-    public static Map<File, Index> getOpenIndexes() {
-        Map<File, Index> result = new HashMap<>();
+    public static Map<File,Index> getOpenIndexes() {
+        Map<File,Index> result = new HashMap<>();
         synchronized (indexes) {
             for (Map.Entry<File,Reference<Index>> e : indexes.entrySet()) {
                 final File folder = e.getKey();

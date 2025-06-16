@@ -111,7 +111,7 @@ public class LuceneIndexTest extends NbTestCase {
         }
         assertNotNull(bt);
         try (FileOutputStream out = new FileOutputStream(bt)) {
-            out.write(new byte[10]);
+            out.write(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 10);
         }
         assertEquals(Index.Status.INVALID, index.getStatus(true));
         assertTrue(cache.listFiles().length==0);

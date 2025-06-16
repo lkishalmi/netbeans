@@ -433,8 +433,6 @@ public class LuceneIndex implements Index.Transactional, Index.WithTermFrequenci
             }
         } catch (RuntimeException e) {
             throw Exceptions.attachMessage(e, "Lucene Index Folder: " + dirCache.folder.getAbsolutePath());
-        } catch (IOException e) {
-            throw Exceptions.attachMessage(e, "Lucene Index Folder: " + dirCache.folder.getAbsolutePath());
         }
     }
 
