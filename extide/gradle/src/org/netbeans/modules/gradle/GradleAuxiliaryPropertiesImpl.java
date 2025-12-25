@@ -52,12 +52,9 @@ public class GradleAuxiliaryPropertiesImpl implements AuxiliaryProperties {
 
     @Override
     public String get(final String key, final boolean shared) {
-        return ProjectManager.mutex().readAccess(new Action<String>() {
-            @Override
-            public String run() {
-                EditableProperties props = getProperties(shared);
-                return props.getOrDefault(PROP_PREFIX + key, props.get(WRONG_PREFIX + key));
-            }
+        return ProjectManager.mutex().readAccess(() -> {
+            EditableProperties props = getProperties(shared);
+            return props.getOrDefault(PROP_PREFIX + key, props.get(WRONG_PREFIX + key));
         });
     }
 

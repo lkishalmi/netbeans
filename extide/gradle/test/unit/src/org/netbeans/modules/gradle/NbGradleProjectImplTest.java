@@ -79,7 +79,7 @@ public class NbGradleProjectImplTest extends AbstractGradleProjectTestCase {
         FileObject a = createGradleProject("projectA-" + rnd,
                 "apply plugin: 'java'\n", "");
         projectDir = a;
-        return ProjectManager.getDefault().findProject(a);
+        return setProjectJavaPlatform(ProjectManager.getDefault().findProject(a), "17");
     }
     
     private void assertHasNoConnection(Project p) throws Exception {

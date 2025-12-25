@@ -20,6 +20,7 @@ package org.netbeans.modules.gradle;
 
 import java.beans.PropertyChangeListener;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -33,13 +34,16 @@ import org.netbeans.junit.NbTestCase;
 import org.netbeans.modules.gradle.api.NbGradleProject;
 import static org.netbeans.modules.gradle.api.NbGradleProject.Quality.FULL_ONLINE;
 import org.netbeans.modules.gradle.options.GradleExperimentalSettings;
+import org.netbeans.modules.gradle.spi.execute.GradleJavaPlatformProvider;
 import org.netbeans.modules.project.uiapi.ProjectOpenedTrampoline;
+import org.netbeans.spi.project.AuxiliaryProperties;
+import org.netbeans.spi.project.LookupProvider;
+import org.netbeans.spi.project.ProjectServiceProvider;
 import org.netbeans.spi.project.ui.ProjectOpenedHook;
 import org.openide.filesystems.FileObject;
 import org.openide.filesystems.FileUtil;
 import org.openide.filesystems.test.TestFileUtils;
 import org.openide.modules.DummyInstalledFileLocator;
-import org.openide.util.Exceptions;
 
 /**
  *
@@ -47,6 +51,8 @@ import org.openide.util.Exceptions;
  */
 public class AbstractGradleProjectTestCase extends NbTestCase {
 
+    private static final String GRADLE_JAVA_PLATFORM_VERSION="gradle.java.platform.version";
+    
     @org.openide.util.lookup.ServiceProvider(service=org.openide.modules.InstalledFileLocator.class, position = 1000)
     public static class InstalledFileLocator extends DummyInstalledFileLocator {
     }
@@ -75,8 +81,12 @@ public class AbstractGradleProjectTestCase extends NbTestCase {
     protected FileObject createGradleProject(String buildScript) throws IOException {
         return createGradleProject(null, buildScript, null);
     }
-    
+
     protected Project openProject(FileObject projectDir) throws IOException {
+        return openProject(projectDir, "17");
+    }
+    
+    protected Project openProject(FileObject projectDir, String javaVersionHint) throws IOException {
         Project prj = ProjectManager.getDefault().findProject(projectDir);
         // project open will provoke project load, and the Project Lookup changes; specifically, the number of Sources providers change
         CountDownLatch latch = new CountDownLatch(1);
@@ -88,6 +98,9 @@ public class AbstractGradleProjectTestCase extends NbTestCase {
         assertNotNull(prj);
         ProjectTrust.getDefault().trustProject(prj);
         NbGradleProject.addPropertyChangeListener(prj, l);
+
+        setProjectJavaPlatform(prj, javaVersionHint);
+
         ProjectOpenedTrampoline.DEFAULT.projectOpened(prj.getLookup().lookup(ProjectOpenedHook.class));
         try {
             // the project is loaded when projectOpened returns, but some events are fired and processed asynchronously.
@@ -128,10 +141,49 @@ public class AbstractGradleProjectTestCase extends NbTestCase {
         return ret;
     }
 
+    protected static final Project setProjectJavaPlatform(Project project, String javaVersionHint) {
+        AuxiliaryProperties aux = project.getLookup().lookup(AuxiliaryProperties.class);
+        aux.put(GRADLE_JAVA_PLATFORM_VERSION, javaVersionHint, false);
+        return project;
+    }
+
     private static File getTestNBDestDir() {
         String destDir = System.getProperty("test.netbeans.dest.dir");
         // set in project.properties as test-unit-sys-prop.test.netbeans.dest.dir
         assertNotNull("test.netbeans.dest.dir property has to be set when running within binary distribution", destDir);
         return new File(destDir);
+    }
+    
+    @ProjectServiceProvider(service = GradleJavaPlatformProvider.class, projectTypes = {
+            @LookupProvider.Registration.ProjectType(id = NbGradleProject.GRADLE_PROJECT_TYPE, position = 0)
+        }
+    )
+    
+    public static final class JavaPlatformProvider implements GradleJavaPlatformProvider {
+        
+        final Project project;
+
+        public JavaPlatformProvider(Project project) {
+            this.project = project;
+        }
+        
+        @Override
+        public File getJavaHome() throws FileNotFoundException {
+            AuxiliaryProperties aux = project.getLookup().lookup(AuxiliaryProperties.class);
+            String javaVersion = aux.get(GRADLE_JAVA_PLATFORM_VERSION, false);
+            if (javaVersion != null) {
+                String javaHome = System.getProperty(GRADLE_JAVA_PLATFORM_VERSION + "." + javaVersion);
+                if (javaHome != null) {
+                    return new File(javaHome);
+                } else {
+                    String osArch = System.getProperty("os.arch");
+                    File linuxHeuristic = new File("/usr/lib/jvm/java-" + javaVersion + "-openjdk-" + osArch);
+                    if (linuxHeuristic.isDirectory()) {
+                        return linuxHeuristic;
+                    }
+                }
+            }
+            return null;
+        }
     }
 }

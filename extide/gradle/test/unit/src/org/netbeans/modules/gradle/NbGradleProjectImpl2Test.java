@@ -66,6 +66,7 @@ public class NbGradleProjectImpl2Test extends AbstractGradleProjectTestCase {
         
         projectDir = src.copy(wd, src.getName(), src.getExt());
         project = ProjectManager.getDefault().findProject(projectDir);
+        setProjectJavaPlatform(project, "17");
         return projectDir;
     }
 
