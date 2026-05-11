@@ -31,11 +31,14 @@ import java.io.File;
 import java.net.PasswordAuthentication;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComponent;
@@ -61,7 +64,6 @@ import org.openide.util.ChangeSupport;
 import org.openide.util.HelpCtx;
 import org.openide.util.Mutex;
 import org.openide.util.NbBundle;
-import org.openide.util.Utilities;
 
 /**
  *
@@ -855,16 +857,13 @@ public class RemoteRepository implements DocumentListener, ActionListener, ItemL
         }
 
         private String getDefaultIdentityFilePath () {
-            String identityFile = ""; //NOI18N
-            File sshDir = new File(System.getProperty("user.home"), ".ssh"); //NOI18N
-            File rsaKey = new File(sshDir, "id_rsa"); //NOI18N
-            File dsaKey = new File(sshDir, "id_dsa"); //NOI18N
-            if (rsaKey.canRead()) {
-                identityFile = rsaKey.getAbsolutePath();
-            } else if (dsaKey.canRead()) {
-                identityFile = dsaKey.getAbsolutePath();
-            }
-            return identityFile;
+            Path sshPath = Path.of(System.getProperty("user.home"), ".ssh"); //NOI18N
+            return List.of("id_ed25519", "id_rsa","id_dsa") //NOI18N
+                    .stream().map(sshPath::resolve)
+                    .filter(Files::isReadable)
+                    .map(Path::toString)
+                    .findFirst()
+                    .orElse(""); //NOI18N
         }
 
         @Override
