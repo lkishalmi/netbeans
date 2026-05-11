@@ -49,7 +49,7 @@ public class AddToDictionaryCompletionItem implements CompletionItem {
     private String              word;
     private boolean             projects;
 
-    
+
     /** Creates a new instance of WordCompletionItem */
     public AddToDictionaryCompletionItem (
         String                  word,
@@ -58,7 +58,7 @@ public class AddToDictionaryCompletionItem implements CompletionItem {
         this.word = word;
         this.projects = projects;
     }
-    
+
     public void defaultAction (
         final JTextComponent    component
     ) {
@@ -76,19 +76,22 @@ public class AddToDictionaryCompletionItem implements CompletionItem {
         ComponentPeer componentPeer = (ComponentPeer) component.getClientProperty (ComponentPeer.class);
         componentPeer.reschedule();
     }
-    
+
+    @Override
     public void processKeyEvent (
         KeyEvent                evt
     ) {
     }
-    
+
+    @Override
     public int getPreferredWidth (
         Graphics                g,
         Font                    defaultFont
     ) {
         return CompletionUtilities.getPreferredWidth (getText (), null, g, defaultFont);
     }
-    
+
+    @Override
     public void render (
         Graphics                g,
         Font                    defaultFont,
@@ -109,35 +112,35 @@ public class AddToDictionaryCompletionItem implements CompletionItem {
             width, height, selected
         );
     }
-    
+
     public CompletionTask createDocumentationTask () {
         return null;
     }
-    
+
     public CompletionTask createToolTipTask () {
         return null;
     }
-    
+
     public boolean instantSubstitution (
         JTextComponent          component
     ) {
         return true;
     }
-    
+
     public int getSortPriority () {
         return 200;
     }
-    
+
     public CharSequence getSortText () {
         return getText();
     }
-    
+
     protected String getText () {
         if (projects)
             return NbBundle.getMessage (AddToDictionaryCompletionItem.class, "CTL_Add_to_projects");
         return NbBundle.getMessage (AddToDictionaryCompletionItem.class, "CTL_Add_to_private");
     }
-    
+
     public CharSequence getInsertPrefix () {
         return "";
     }

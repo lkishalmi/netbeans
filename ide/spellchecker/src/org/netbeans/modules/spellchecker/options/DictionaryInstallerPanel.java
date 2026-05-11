@@ -51,11 +51,11 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
     private final JButton okButton;
 
     private final Collection<? extends String> existingLocales;
-    
+
     public DictionaryInstallerPanel (JButton okButton, Collection<? extends String> existingLocales) {
         this.okButton = okButton;
         this.existingLocales = existingLocales;
-        
+
         initComponents ();
         initValues ();
         DocumentListener l = new DocumentListener() {
@@ -67,7 +67,7 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
         tDictionary.getDocument().addDocumentListener(l);
         tLocale.getDocument().addDocumentListener(l);
     }
-    
+
     /** This method is called from within the constructor to
      * initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is
@@ -180,8 +180,8 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
         if (ret == JFileChooser.APPROVE_OPTION)
             tDictionary.setText (filechooser.getSelectedFile ().getAbsolutePath ());
     }//GEN-LAST:event_bBrowseActionPerformed
-    
-    
+
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     public javax.swing.JButton bBrowse;
     public javax.swing.JComboBox cEncoding;
@@ -193,7 +193,7 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
     public javax.swing.JTextField tDictionary;
     public javax.swing.JTextField tLocale;
     // End of variables declaration//GEN-END:variables
-    
+
     public static String getMessage (String key) {
         return NbBundle.getMessage (DictionaryInstallerPanel.class, key);
     }
@@ -201,7 +201,7 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
     private static String userdir = System.getProperty ("netbeans.user"); // NOI18N
     private static boolean availHomedir = new File (homedir).canWrite ();
     private static boolean availUserdir = new File (userdir).canWrite ();
-    
+
     public final void initValues () {
         tDictionary.setText (System.getProperty ("user.home")); // NOI18N
         Set<String> set = Charset.availableCharsets ().keySet ();
@@ -229,7 +229,7 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
 
     private void updateErrors() {
         if (notifications == null) return;
-        
+
         notifications.clearMessages();
         okButton.setEnabled(false);
 
@@ -264,7 +264,7 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
 
         okButton.setEnabled(true);
     }
-    
+
     private static final int BUFFER_LENGTH = 65536;
 
     private static File dictionaryFile(String loc, boolean shared) {
@@ -276,7 +276,7 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
             filename += "_" + loc;
         return new File (filename + ".txt"); // NOI18N
     }
-    
+
     public static void doInstall (DictionaryDescription description) {
         InputStreamReader input = null;
         OutputStreamWriter output = null;
@@ -314,7 +314,7 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
         } finally {
             if (input != null) try { input.close (); } catch (IOException e) {}
             if (output != null) try { output.close (); } catch (IOException e) {}
-            
+
             //TODO: Dictionary.clearDictionaries();
         }
     }
@@ -348,7 +348,7 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
             }
         }
     }
-    
+
     public static class DictionaryDescription {
         private boolean rAllUsers;
         private boolean rCurrentUser;
@@ -368,5 +368,5 @@ public class DictionaryInstallerPanel extends javax.swing.JPanel {
             return Utilities.name2Locale(targetLocale);
         }
     }
-    
+
 }

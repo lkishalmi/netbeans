@@ -31,8 +31,9 @@ public class PlainTokenListProvider implements TokenListProvider {
     public PlainTokenListProvider() {
     }
 
+    @Override
     public TokenList findTokenList(Document doc) {
         return new PlainTokenList(doc);
     }
-    
+
 }

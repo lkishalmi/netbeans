@@ -44,7 +44,8 @@ public class PlainTokenList implements TokenList {
         this.doc = doc;
     }
 
-    
+
+    @Override
     public void setStartOffset(int offset) {
         currentWord = null;
         currentStartOffset = (-1);
@@ -54,24 +55,27 @@ public class PlainTokenList implements TokenList {
             if (!Character.isLetter(content.charAt(offset))) {
                 break;
             }
-            
+
             offset--;
         }
-        
+
         this.nextSearchOffset = offset;
         FileObject fileObject = FileUtil.getConfigFile ("Spellcheckers/Plain");
         Boolean b = (Boolean) fileObject.getAttribute ("Hidden");
         hidden = Boolean.TRUE.equals (b);
     }
 
+    @Override
     public int getCurrentWordStartOffset() {
         return currentStartOffset;
     }
 
+    @Override
     public CharSequence getCurrentWordText() {
         return currentWord;
     }
 
+    @Override
     public boolean nextWord() {
         if (hidden) return false;
         try {
@@ -94,7 +98,7 @@ public class PlainTokenList implements TokenList {
                         return true;
                     }
                 }
-                
+
                 offset++;
             }
 
@@ -112,9 +116,11 @@ public class PlainTokenList implements TokenList {
         }
     }
 
+    @Override
     public void addChangeListener(ChangeListener l) {
     }
 
+    @Override
     public void removeChangeListener(ChangeListener l) {
     }
 

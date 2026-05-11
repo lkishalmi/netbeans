@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+AutoUpdate-Show-In-Client: false
+OpenIDE-Module: org.netbeans.modules.spellchecker.hunspell
+OpenIDE-Module-Implementation-Version: 1
+OpenIDE-Module-Layer: org/netbeans/modules/spellchecker/hunspell/layer.xml
+OpenIDE-Module-Localizing-Bundle: org/netbeans/modules/spellchecker/hunspell/Bundle.properties
+

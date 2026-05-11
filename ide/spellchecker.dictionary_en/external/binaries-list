@@ -14,5 +14,5 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-B86941F672FB1B1ED8A68D8B9B1C4F6BA96A91C5 wordlist-en_US-large-2017.08.24.zip
-EC2751668FDF959F31F88FAF3A03C9A28F3E6746 wordlist-en_GB-large-2017.08.24.zip
+D279BAFC5E3129F9F23577AE5C1C2FEE1BCC0D0F https://github.com/en-wl/wordlist/releases/download/rel-2026.02.25/hunspell-en_GB-large-2026.02.25.zip wordlist-hunspell-en_GB-large-2026.02.25.zip
+76D2AE78B960BC26C3F271ED91A208DBE5BBF2AC https://github.com/en-wl/wordlist/releases/download/rel-2026.02.25/hunspell-en_US-large-2026.02.25.zip wordlist-hunspell-en_US-large-2026.02.25.zip

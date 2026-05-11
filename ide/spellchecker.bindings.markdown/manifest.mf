@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+OpenIDE-Module: org.netbeans.modules.spellchecker.bindings.markdown
+OpenIDE-Module-Layer: org/netbeans/modules/spellchecker/bindings/markdown/layer.xml
+OpenIDE-Module-Localizing-Bundle: org/netbeans/modules/spellchecker/bindings/markdown/Bundle.properties
+OpenIDE-Module-Specification-Version: 1.0
+

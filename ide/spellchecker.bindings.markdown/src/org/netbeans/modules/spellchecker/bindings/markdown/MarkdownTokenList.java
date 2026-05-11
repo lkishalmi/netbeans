@@ -19,37 +19,38 @@
 /*
  * Contributor(s): Stefan Riha, Roland Poppenreiter
  */
-package org.netbeans.modules.spellchecker.bindings.htmlxml;
+package org.netbeans.modules.spellchecker.bindings.markdown;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.event.ChangeListener;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 import org.netbeans.api.editor.document.LineDocumentUtils;
+import org.netbeans.api.lexer.TokenHierarchy;
+import org.netbeans.api.lexer.TokenId;
+import org.netbeans.api.lexer.TokenSequence;
 import org.netbeans.editor.BaseDocument;
+import org.netbeans.modules.editor.NbEditorUtilities;
 import org.netbeans.modules.spellchecker.spi.language.TokenList;
+import org.netbeans.modules.spellchecker.spi.language.TokenListProvider;
 import org.openide.ErrorManager;
 
-/**
- * Tokenize Html and Xml text for spell checking. Based on corresponding
- * JavaTokenList by Jan Lahoda.
- *
- * @author Riha, Poppenreiter
- */
-public abstract sealed class AbstractTokenList implements TokenList permits HtmlTokenList, XmlTokenList {
+
+public final class MarkdownTokenList implements TokenList {
 
     record SpellSpan(int begin, int end) {
         public static final SpellSpan NONE = new SpellSpan(-1, -1);
     };
 
-    protected final BaseDocument doc;
+    private final BaseDocument doc;
     private CharSequence currentWord;
     private int currentStartOffset;
-    protected int nextSearchOffset;
+    private int nextSearchOffset;
     private int ignoreBefore;
 
     /** Creates a new instance of HtmlXmlTokenList */
-    AbstractTokenList(BaseDocument doc) {
+    MarkdownTokenList(BaseDocument doc) {
         this.doc = doc;
     }
 
@@ -61,7 +62,7 @@ public abstract sealed class AbstractTokenList implements TokenList permits Html
         try {
             this.nextSearchOffset = LineDocumentUtils.getLineStartOffset(doc, offset);
         } catch (BadLocationException ex) {
-            Logger.getLogger(AbstractTokenList.class.getName()).log(Level.FINE, null, ex);
+            Logger.getLogger(MarkdownTokenList.class.getName()).log(Level.FINE, null, ex);
             this.nextSearchOffset = offset;
         }
     }
@@ -75,8 +76,6 @@ public abstract sealed class AbstractTokenList implements TokenList permits Html
     public CharSequence getCurrentWordText() {
         return currentWord;
     }
-
-    abstract SpellSpan findNextSpellSpan() throws BadLocationException;
 
     @Override
     public boolean nextWord() {
@@ -138,6 +137,22 @@ public abstract sealed class AbstractTokenList implements TokenList permits Html
         }
     }
 
+    private SpellSpan findNextSpellSpan() {
+        TokenHierarchy<Document> h = TokenHierarchy.get((Document) doc);
+        TokenSequence<?> ts = h.tokenSequence();
+        if (ts != null) {
+            ts.move(nextSearchOffset);
+
+            while (ts.moveNext()) {
+                TokenId id = ts.token().id();
+
+                return new SpellSpan(ts.offset(), ts.offset() + ts.token().length());
+            }
+        }
+        return SpellSpan.NONE;
+    }
+
+
     @Override
     public void addChangeListener(ChangeListener l) {
     //ignored...
@@ -147,4 +162,24 @@ public abstract sealed class AbstractTokenList implements TokenList permits Html
     public void removeChangeListener(ChangeListener l) {
     //ignored...
     }
+
+    public static final class Provider implements TokenListProvider {
+
+        public Provider() {}
+
+        @Override
+        public TokenList findTokenList(Document doc) {
+            if (doc instanceof BaseDocument bdoc) {
+                String docMimetype = NbEditorUtilities.getMimeType(doc);
+
+                if ("text/x-markdown".equals(docMimetype)) { //NOI18N
+                    return new MarkdownTokenList(bdoc);
+                }
+            }
+            return null;
+
+        }
+
+    }
 }
+
