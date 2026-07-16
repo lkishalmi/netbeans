@@ -38,23 +38,24 @@ public class MultiTokenList {
 
     private static final class MultiTokenListImpl implements TokenList, ChangeListener {
 
-        private List<TokenList> delegateTo;
-        private List<Boolean> moved;
+        private final List<TokenList> delegateTo;
+        private final List<Boolean> moved;
         
         private int currentOffset;
         private CharSequence currentWord;
         
-        private ChangeSupport cs = new ChangeSupport(this);
+        private final ChangeSupport cs = new ChangeSupport(this);
 
         public MultiTokenListImpl(List<TokenList> delegateTo) {
             this.delegateTo = delegateTo;
-            this.moved = new ArrayList<Boolean>(delegateTo.size());
+            this.moved = new ArrayList<>(delegateTo.size());
             
             for (TokenList l : delegateTo) {
                 l.addChangeListener(this);
             }
         }
     
+        @Override
         public void setStartOffset(int offset) {
             moved.clear();
             
@@ -64,6 +65,7 @@ public class MultiTokenList {
             }
         }
 
+        @Override
         public boolean nextWord() {
             TokenList first = null;
             int firstOffset = Integer.MAX_VALUE;
@@ -93,22 +95,27 @@ public class MultiTokenList {
             }
         }
 
+        @Override
         public int getCurrentWordStartOffset() {
             return currentOffset;
         }
 
+        @Override
         public CharSequence getCurrentWordText() {
             return currentWord;
         }
 
+        @Override
         public void addChangeListener(ChangeListener l) {
             cs.addChangeListener(l);
         }
 
+        @Override
         public void removeChangeListener(ChangeListener l) {
             cs.removeChangeListener(l);
         }
 
+        @Override
         public void stateChanged(ChangeEvent e) {
             cs.fireChange();
         }

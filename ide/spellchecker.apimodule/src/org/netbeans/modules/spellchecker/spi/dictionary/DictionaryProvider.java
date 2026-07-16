@@ -19,7 +19,6 @@
 package org.netbeans.modules.spellchecker.spi.dictionary;
 
 import java.util.Locale;
-import org.netbeans.modules.spellchecker.spi.dictionary.Dictionary;
 
 /**
  *

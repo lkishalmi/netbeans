@@ -21,4 +21,18 @@
 -->
 <!DOCTYPE filesystem PUBLIC "-//NetBeans//DTD Filesystem 1.1//EN" "http://www.netbeans.org/dtds/filesystem-1_1.dtd">
 <filesystem>
+    <folder name="Editors">
+        <folder name="Spellchecker">
+            <folder name="Dictionaries">
+                <folder name="en_US">
+                    <file name="hunspell.dic" url="jar:nbinst://modules/dict/hunspell-en_US.zip!/en_US-large.dic"/>
+                    <file name="hunspell.aff" url="jar:nbinst://modules/dict/hunspell-en_US.zip!/en_US-large.aff"/>
+                </folder>
+                <folder name="en_GB">
+                    <file name="hunspell.dic" url="jar:nbinst://modules/dict/hunspell-en_GB.zip!/en_GB-large.dic"/>
+                    <file name="hunspell.aff" url="jar:nbinst://modules/dict/hunspell-en_GB.zip!/en_GB-large.aff"/>
+                </folder>
+            </folder>
+        </folder>
+    </folder>
 </filesystem>

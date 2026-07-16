@@ -35,6 +35,7 @@ public final class SpellcheckerHighlightLayerFactory implements HighlightsLayerF
     public SpellcheckerHighlightLayerFactory() {
     }
 
+    @Override
     public HighlightsLayer[] createLayers(Context ctx) {
         OffsetsBag bag = getBag(ctx.getComponent());
         return new HighlightsLayer[]{

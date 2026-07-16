@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.netbeans.modules.spellchecker.api;
 
 import java.lang.reflect.InvocationTargetException;
@@ -26,7 +25,6 @@ import javax.swing.text.JTextComponent;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
-
 /**
  *
  * @author hanz
@@ -34,25 +32,15 @@ import org.openide.util.Lookup;
  */
 public class Spellchecker {
 
-    public static void register (
-        JTextComponent          textComponent
-    ) {
-        ClassLoader systemClassLoader = Lookup.getDefault ().lookup (ClassLoader.class);
+    public static void register(JTextComponent textComponent) {
+        ClassLoader systemClassLoader = Lookup.getDefault().lookup(ClassLoader.class);
         try {
-            Class componentPeerClass = systemClassLoader.loadClass ("org.netbeans.modules.spellchecker.ComponentPeer");
-            Method assureInstalledMethod = componentPeerClass.getMethod ("assureInstalled", Class.forName ("javax.swing.text.JTextComponent"));
-            assureInstalledMethod.invoke (null, textComponent);
-        } catch (IllegalAccessException ex) {
-            Exceptions.printStackTrace (ex);
-        } catch (IllegalArgumentException ex) {
-            Exceptions.printStackTrace (ex);
-        } catch (InvocationTargetException ex) {
-            Exceptions.printStackTrace (ex);
+            Class<?> componentPeerClass = systemClassLoader.loadClass("org.netbeans.modules.spellchecker.ComponentPeer");
+            Method assureInstalledMethod = componentPeerClass.getMethod("assureInstalled", Class.forName("javax.swing.text.JTextComponent"));
+            assureInstalledMethod.invoke(null, textComponent);
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException ex) {
+            Exceptions.printStackTrace(ex);
         } catch (ClassNotFoundException ex) {
-        } catch (NoSuchMethodException ex) {
-            Exceptions.printStackTrace (ex);
-        } catch (SecurityException ex) {
-            Exceptions.printStackTrace (ex);
         }
     }
 }

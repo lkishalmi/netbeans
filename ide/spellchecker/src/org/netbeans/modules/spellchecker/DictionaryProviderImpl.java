@@ -27,6 +27,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -37,6 +38,8 @@ import java.util.NoSuchElementException;
 import org.netbeans.modules.spellchecker.spi.dictionary.Dictionary;
 import org.netbeans.modules.spellchecker.spi.dictionary.DictionaryProvider;
 import org.openide.ErrorManager;
+import org.openide.filesystems.FileObject;
+import org.openide.filesystems.FileUtil;
 import org.openide.modules.InstalledFileLocator;
 import org.openide.util.NbBundle;
 import org.openide.util.lookup.ServiceProvider;
@@ -48,11 +51,13 @@ import org.openide.util.lookup.ServiceProvider;
 @ServiceProvider(service=DictionaryProvider.class)
 public class DictionaryProviderImpl implements DictionaryProvider {
     
+    private static final String DICTIONARIES_ROOT = "Editors/Spellchecker/Dictionaries";
+    
     /** Creates a new instance of DictionaryProviderImpl */
     public DictionaryProviderImpl() {
     }
 
-    private final Map<String, Dictionary> dictionaries = new HashMap<>();
+    private final Map<Locale, Dictionary> dictionaries = new HashMap<>();
     
 //    public DictionaryImpl getDefault() {
 //        return getDictionary(Locale.getDefault());
@@ -64,16 +69,7 @@ public class DictionaryProviderImpl implements DictionaryProvider {
     
     @Override
     public synchronized Dictionary getDictionary(Locale locale) {
-        Iterator<String> suffixes = getLocalizingSuffixes(locale);
-        
-        while (suffixes.hasNext()) {
-            Dictionary current = dictionaries.get(suffixes.next());
-            
-            if (current != null)
-                return current;
-        }
-        
-        return createDictionary(locale);
+        return dictionaries.computeIfAbsent(locale, this::createDictionary);
     }
     
     public static synchronized Locale[] getInstalledDictionariesLocales() {
@@ -119,63 +115,33 @@ public class DictionaryProviderImpl implements DictionaryProvider {
     }
     
     private synchronized Dictionary createDictionary(Locale locale) {
+        Dictionary ret = null;
         try {
-            List<URL> sources = new ArrayList<>();
-            String suffix = getDictionaryStream(locale, sources);
-            
-            if (suffix == null) {
-                return null;
+            FileObject dicts = FileUtil.getConfigFile(DICTIONARIES_ROOT);
+            if (dicts != null) {
+                FileObject localeDict = dicts.getFileObject(locale.toString());
+                if (localeDict != null) {
+                    ret = HunspellDictionary.createFromFolder(localeDict);
+                }
             }
-
-            Dictionary dict = TrieDictionary.getDictionary(suffix, sources);
-//            DictionaryImpl dict = new DictionaryImpl(locale, suffix, streams);
-//            
-            dictionaries.put(suffix, dict);
-            
-            return dict;
         } catch (IOException e) {
             ErrorManager.getDefault().notify(ErrorManager.INFORMATIONAL, e);
-            return null;
         }
+        return ret;
     }
 
     static String getDictionaryStream(Locale locale, List<URL> streams) throws IOException {
-        Iterator<String> suffixes = getLocalizingSuffixes(locale);
-        
-        while (suffixes.hasNext()) {
-            String currentSuffix = suffixes.next();
-            
-            File file = InstalledFileLocator.getDefault().locate("modules/dict/dictionary" + currentSuffix + ".txt", null, false);
-            
-            if (file != null) {
-                streams.add(org.openide.util.Utilities.toURI(file).toURL());
-                return currentSuffix;
-            }
+        FileObject dicts = FileUtil.getConfigFile(DICTIONARIES_ROOT);
+        if (dicts != null) {
+            Iterator<String> suffixes = getLocalizingSuffixes(locale);
 
-            String cnb = null;
-            if (currentSuffix.matches("_en(|_GB|_US)")) { // NOI18N
-                // Just hardcode this one for now.
-                cnb = "org.netbeans.modules.spellchecker.dictionary_en"; // NOI18N
-            }
-            file = InstalledFileLocator.getDefault().locate("modules/dict/dictionary" + currentSuffix + ".description", cnb, false);
-
-            if (file != null && InstalledFileLocator.getDefault().locate("modules/dict/dictionary" + currentSuffix + ".description_hidden", null, false) == null) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
-
-                try {
-                    String line;
-
-                    while ((line = in.readLine()) != null) {
-                        streams.add(new URL(line));
-                    }
-
+            while (suffixes.hasNext()) {
+                String currentSuffix = suffixes.next();
+                
+                FileObject lfolder = dicts.getFileObject(currentSuffix);
+                if (lfolder != null) {
+                    streams.add(lfolder.toURL());
                     return currentSuffix;
-                } finally {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        ErrorManager.getDefault().notify(ErrorManager.INFORMATIONAL, e);
-                    }
                 }
             }
         }
