@@ -204,7 +204,7 @@ public final class NbGradleProjectImpl implements Project {
     }
     
     public GradleProject getGradleProject() {
-        return projectWithQuality(null, EVALUATED, false, false);
+        return projectWithQuality(null, FALLBACK, false, false);
     }
 
     public void fireProjectReload(boolean wait) {

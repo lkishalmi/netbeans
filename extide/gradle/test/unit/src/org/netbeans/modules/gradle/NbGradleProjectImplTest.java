@@ -285,7 +285,7 @@ public class NbGradleProjectImplTest extends AbstractGradleProjectTestCase {
         OpenProjects.getDefault().close(new Project[] { prj });
         OpenProjects.getDefault().openProjects().get();
         
-        assertTrue(ngp.getQuality().atLeast(Quality.EVALUATED));
+        assertTrue(ngp.getQuality() == Quality.FALLBACK);
 
         copy(projectDir, s);
 
@@ -299,6 +299,8 @@ public class NbGradleProjectImplTest extends AbstractGradleProjectTestCase {
         }
         
         Project prj2 = FileOwnerQuery.getOwner(s);
+        OpenProjects.getDefault().open(new Project[] { prj2 }, false);
+        OpenProjects.getDefault().openProjects().get();
         NbGradleProject ngp2 = NbGradleProject.get(prj2);
         // initializes the project, since it is trusted (reopened), should come
         // in at least EVALUATED quality
